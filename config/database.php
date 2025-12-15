@@ -1,7 +1,10 @@
 <?php
-session_start();
+// config/database.php
 
-require_once __DIR__ . '/../includes/functions.php';
+// بدء الجلسة فقط إذا لم تكن قد بدأت
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 class Database {
     private $host = 'localhost';
@@ -36,7 +39,6 @@ function getUserType() {
     return $_SESSION['user_type'] ?? null;
 }
 
-// CORRECTION : Fonction checkAuth corrigée
 function checkAuth($allowed_types = []) {
     if (!isLoggedIn()) {
         redirect('../auth/login.php');
@@ -49,19 +51,5 @@ function checkAuth($allowed_types = []) {
             die('Accès non autorisé. Vous n\'avez pas les permissions nécessaires. Type utilisateur: ' . $user_type);
         }
     }
-}
-
-function getStatusBadge($status) {
-    $badges = [
-        'disponible' => '<span class="badge badge-success">Disponible</span>',
-        'reserve' => '<span class="badge badge-warning">Réservé</span>',
-        'donne' => '<span class="badge badge-info">Donné</span>',
-        'expire' => '<span class="badge badge-danger">Expiré</span>',
-        'en_attente' => '<span class="badge badge-secondary">En attente</span>',
-        'acceptee' => '<span class="badge badge-success">Acceptée</span>',
-        'refusee' => '<span class="badge badge-danger">Refusée</span>',
-        'annulee' => '<span class="badge badge-dark">Annulée</span>'
-    ];
-    return $badges[$status] ?? '<span class="badge badge-light">' . $status . '</span>';
 }
 ?>

@@ -1,4 +1,13 @@
 <?php
+// auth/forgot-password.php
+session_start();
+
+// إذا كان المستخدم مسجل دخول، أرسله للصفحة الرئيسية
+if (isset($_SESSION['user_id'])) {
+    header('Location: ../index.php');
+    exit();
+}
+
 require_once '../config/database.php';
 
 $database = new Database();
@@ -16,31 +25,21 @@ if ($_POST) {
     $stmt->execute();
 
     if ($stmt->rowCount() > 0) {
-        $success = "Un lien de réinitialisation a été envoyé à votre email.";
+        $success = "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.";
     } else {
-        $error = "Aucun compte trouvé avec cet email.";
+        $error = "لا يوجد حساب مرتبط بهذا البريد الإلكتروني.";
     }
 }
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mot de passe oublié - Age of Donnation</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-    <div class="header">
-        <nav class="nav">
-            <a href="../index.php" class="logo">Age of Donnation</a>
-        </nav>
-    </div>
 
-    <div class="container">
-        <div class="card" style="max-width: 400px; margin: 0 auto;">
+$page_title = 'نسيت كلمة المرور';
+require_once '../includes/header.php';
+?>
+
+<div class="row">
+    <div class="col-6" style="margin: 0 auto;">
+        <div class="card">
             <div class="card-header">
-                <h2 style="text-align: center; margin: 0;">Mot de passe oublié</h2>
+                <h3><i class="fas fa-key"></i> نسيت كلمة المرور</h3>
             </div>
             <div class="card-body">
                 <?php if($error): ?>
@@ -51,20 +50,27 @@ if ($_POST) {
                     <div class="alert alert-success"><?php echo $success; ?></div>
                 <?php endif; ?>
                 
+                <p style="margin-bottom: 20px; color: #666;">
+                    أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور.
+                </p>
+
                 <form method="POST">
                     <div class="form-group">
-                        <label class="form-label">Email</label>
+                        <label class="form-label">البريد الإلكتروني *</label>
                         <input type="email" name="email" class="form-control" value="<?php echo $_POST['email'] ?? ''; ?>" required>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Réinitialiser le mot de passe</button>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-paper-plane"></i> إرسال رابط التعيين
+                    </button>
                 </form>
                 
-                <div style="text-align: center; margin-top: 1.5rem;">
-                    <a href="login.php">Retour à la connexion</a>
+                <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <a href="login.php"><i class="fas fa-arrow-right"></i> العودة لتسجيل الدخول</a>
                 </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+
+<?php require_once '../includes/footer.php'; ?>

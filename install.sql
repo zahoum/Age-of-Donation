@@ -1,153 +1,342 @@
--- =============================================
--- AGE OF DONNATION - SCRIPT SQL COMPLET
--- =============================================
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : 127.0.0.1
+-- Généré le : lun. 08 déc. 2025 à 21:25
+-- Version du serveur : 10.4.32-MariaDB
+-- Version de PHP : 8.0.30
 
--- 1. CRÉATION DE LA BASE DE DONNÉES
-CREATE DATABASE IF NOT EXISTS age_of_donnation CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE age_of_donnation;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
--- 2. CRÉATION DE LA TABLE USERS
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    nom VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    type ENUM('donateur', 'beneficiaire', 'livreur', 'admin') NOT NULL,
-    telephone VARCHAR(20),
-    adresse TEXT,
-    ville VARCHAR(100),
-    status ENUM('active', 'inactive', 'pending') DEFAULT 'active',
-    reset_token VARCHAR(100),
-    reset_expires DATETIME,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
 
--- 3. CRÉATION DE LA TABLE DONS
-CREATE TABLE dons (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    donateur_id INT NOT NULL,
-    titre VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    categorie ENUM('vetements', 'nourriture', 'meubles', 'livres', 'electromenager', 'divers') NOT NULL,
-    etat ENUM('neuf', 'bon_etat', 'usage') NOT NULL,
-    adresse_retrait TEXT,
-    ville VARCHAR(100),
-    statut ENUM('disponible', 'reserve', 'donne', 'expire') DEFAULT 'disponible',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (donateur_id) REFERENCES users(id) ON DELETE CASCADE
-);
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- 4. CRÉATION DE LA TABLE DEMANDES
-CREATE TABLE demandes (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    beneficiaire_id INT NOT NULL,
-    don_id INT NOT NULL,
-    message_demande TEXT,
-    statut ENUM('en_attente', 'acceptee', 'refusee', 'annulee') DEFAULT 'en_attente',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (beneficiaire_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (don_id) REFERENCES dons(id) ON DELETE CASCADE
-);
+--
+-- Base de données : `age_of_donnation`
+--
 
--- 5. CRÉATION DE LA TABLE LIVRAISONS
-CREATE TABLE livraisons (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    demande_id INT NOT NULL,
-    livreur_id INT,
-    frais_livraison DECIMAL(10,2) DEFAULT 0,
-    statut ENUM('en_attente', 'assignee', 'en_cours', 'livree', 'annulee') DEFAULT 'en_attente',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (demande_id) REFERENCES demandes(id) ON DELETE CASCADE,
-    FOREIGN KEY (livreur_id) REFERENCES users(id) ON DELETE SET NULL
-);
+-- --------------------------------------------------------
 
--- 6. CRÉATION DE LA TABLE MESSAGES
-CREATE TABLE messages (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    expediteur_id INT NOT NULL,
-    destinataire_id INT NOT NULL,
-    demande_id INT,
-    message TEXT NOT NULL,
-    lu BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (expediteur_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (destinataire_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (demande_id) REFERENCES demandes(id) ON DELETE SET NULL
-);
+--
+-- Structure de la table `demandes`
+--
 
--- 7. CRÉATION DE LA TABLE LIVREURS
-CREATE TABLE livreurs (
-    user_id INT PRIMARY KEY,
-    vehicule_type ENUM('velo', 'moto', 'voiture', 'camion') NOT NULL,
-    plaque_immatriculation VARCHAR(50),
-    zone_intervention TEXT,
-    statut ENUM('actif', 'inactif', 'en_conge') DEFAULT 'actif',
-    note_moyenne DECIMAL(3,2) DEFAULT 5.00,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+CREATE TABLE `demandes` (
+  `id` int(11) NOT NULL,
+  `beneficiaire_id` int(11) NOT NULL,
+  `don_id` int(11) NOT NULL,
+  `message_demande` text DEFAULT NULL,
+  `statut` enum('en_attente','acceptee','refusee','annulee') DEFAULT 'en_attente',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================
--- DONNÉES DE TEST
--- =============================================
+--
+-- Déchargement des données de la table `demandes`
+--
 
--- 8. INSERTION DU COMPTE ADMIN
-INSERT INTO users (nom, email, password, type, status) VALUES 
-('Administrateur', 'admin@ageofdonnation.org', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'active');
+INSERT INTO `demandes` (`id`, `beneficiaire_id`, `don_id`, `message_demande`, `statut`, `created_at`) VALUES
+(1, 3, 1, 'Bonjour, je suis intéressée par les livres pour enfants pour ma fille de 5 ans. Serait-il possible de les récupérer ce week-end ?', 'en_attente', '2025-12-08 17:50:38'),
+(2, 3, 2, 'Ces vêtements me seraient très utiles pour un entretien d embauche. Merci pour votre générosité.', 'en_attente', '2025-12-08 17:50:38');
 
--- 9. INSERTION DE QUELQUES UTILISATEURS DE TEST
-INSERT INTO users (nom, email, password, type, telephone, ville, status) VALUES 
-('Jean Dupont', 'jean.dupont@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'donateur', '0123456789', 'Paris', 'active'),
-('Marie Martin', 'marie.martin@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'beneficiaire', '0123456790', 'Lyon', 'active'),
-('Pierre Durand', 'pierre.durand@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'livreur', '0123456791', 'Marseille', 'active');
+-- --------------------------------------------------------
 
--- 10. INSERTION DE QUELQUES DONS DE TEST
-INSERT INTO dons (donateur_id, titre, description, categorie, etat, adresse_retrait, ville, statut) VALUES 
-(2, 'Livres pour enfants', 'Collection de livres jeunesse en bon état, idéale pour enfants de 3 à 8 ans.', 'livres', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible'),
-(2, 'Vêtements femme taille M', 'Lot de vêtements femme taille M : robes, jupes, hauts. Très bon état.', 'vetements', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible'),
-(2, 'Meuble TV en bois', 'Meuble télévision en bois massif, dimensions 120x40x50 cm. Quelques traces d usage.', 'meubles', 'usage', '123 Avenue des Champs-Élysées', 'Paris', 'disponible');
+--
+-- Structure de la table `dons`
+--
 
--- 11. INSERTION DE DEMANDES DE TEST
-INSERT INTO demandes (beneficiaire_id, don_id, message_demande, statut) VALUES 
-(3, 1, 'Bonjour, je suis intéressée par les livres pour enfants pour ma fille de 5 ans. Serait-il possible de les récupérer ce week-end ?', 'en_attente'),
-(3, 2, 'Ces vêtements me seraient très utiles pour un entretien d embauche. Merci pour votre générosité.', 'en_attente');
+CREATE TABLE `dons` (
+  `id` int(11) NOT NULL,
+  `donateur_id` int(11) NOT NULL,
+  `titre` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `photo_principale` varchar(255) DEFAULT NULL,
+  `categorie` enum('vetements','nourriture','meubles','livres','electromenager','divers') NOT NULL,
+  `etat` enum('neuf','bon_etat','usage') NOT NULL,
+  `adresse_retrait` text DEFAULT NULL,
+  `ville` varchar(100) DEFAULT NULL,
+  `statut` enum('disponible','reserve','donne','expire') DEFAULT 'disponible',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 12. INSERTION D UN LIVREUR DE TEST
-INSERT INTO livreurs (user_id, vehicule_type, plaque_immatriculation, zone_intervention, statut) VALUES 
-(4, 'voiture', 'AB-123-CD', 'Paris, Lyon, Marseille', 'actif');
+--
+-- Déchargement des données de la table `dons`
+--
 
--- 13. INSERTION DE LIVRAISONS DE TEST
-INSERT INTO livraisons (demande_id, livreur_id, frais_livraison, statut) VALUES 
-(1, 4, 0.00, 'en_attente');
+INSERT INTO `dons` (`id`, `donateur_id`, `titre`, `description`, `photo_principale`, `categorie`, `etat`, `adresse_retrait`, `ville`, `statut`, `created_at`, `updated_at`) VALUES
+(1, 2, 'Livres pour enfants', 'Collection de livres jeunesse en bon état, idéale pour enfants de 3 à 8 ans.', NULL, 'livres', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38'),
+(2, 2, 'Vêtements femme taille M', 'Lot de vêtements femme taille M : robes, jupes, hauts. Très bon état.', NULL, 'vetements', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38'),
+(3, 2, 'Meuble TV en bois', 'Meuble télévision en bois massif, dimensions 120x40x50 cm. Quelques traces d usage.', NULL, 'meubles', 'usage', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38');
 
--- 14. INSERTION DE MESSAGES DE TEST
-INSERT INTO messages (expediteur_id, destinataire_id, demande_id, message) VALUES 
-(3, 2, 1, 'Bonjour, je suis intéressée par les livres pour enfants. Quand puis-je les récupérer ?'),
-(2, 3, 1, 'Bonjour, les livres sont disponibles ce week-end de 14h à 18h. Ça vous convient ?');
+-- --------------------------------------------------------
 
--- =============================================
--- VÉRIFICATION
--- =============================================
+--
+-- Structure de la table `don_photos`
+--
 
--- 15. AFFICHER LES TABLES CRÉÉES
-SHOW TABLES;
+CREATE TABLE `don_photos` (
+  `id` int(11) NOT NULL,
+  `don_id` int(11) NOT NULL,
+  `photo_path` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 16. COMPTER LES ENREGISTREMENTS PAR TABLE
-SELECT 'users' as table_name, COUNT(*) as count FROM users
-UNION ALL
-SELECT 'dons', COUNT(*) FROM dons
-UNION ALL
-SELECT 'demandes', COUNT(*) FROM demandes
-UNION ALL
-SELECT 'livraisons', COUNT(*) FROM livraisons
-UNION ALL
-SELECT 'messages', COUNT(*) FROM messages
-UNION ALL
-SELECT 'livreurs', COUNT(*) FROM livreurs;
+-- --------------------------------------------------------
 
+--
+-- Structure de la table `livraisons`
+--
+
+CREATE TABLE `livraisons` (
+  `id` int(11) NOT NULL,
+  `demande_id` int(11) NOT NULL,
+  `livreur_id` int(11) DEFAULT NULL,
+  `frais_livraison` decimal(10,2) DEFAULT 0.00,
+  `statut` enum('en_attente','assignee','en_cours','livree','annulee') DEFAULT 'en_attente',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `livraisons`
+--
+
+INSERT INTO `livraisons` (`id`, `demande_id`, `livreur_id`, `frais_livraison`, `statut`, `created_at`) VALUES
+(1, 1, 4, 0.00, 'en_attente', '2025-12-08 17:50:38');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `livreurs`
+--
+
+CREATE TABLE `livreurs` (
+  `user_id` int(11) NOT NULL,
+  `vehicule_type` enum('velo','moto','voiture','camion') NOT NULL,
+  `plaque_immatriculation` varchar(50) DEFAULT NULL,
+  `zone_intervention` text DEFAULT NULL,
+  `statut` enum('actif','inactif','en_conge') DEFAULT 'actif',
+  `note_moyenne` decimal(3,2) DEFAULT 5.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `livreurs`
+--
+
+INSERT INTO `livreurs` (`user_id`, `vehicule_type`, `plaque_immatriculation`, `zone_intervention`, `statut`, `note_moyenne`, `created_at`, `updated_at`) VALUES
+(4, 'voiture', 'AB-123-CD', 'Paris, Lyon, Marseille', 'actif', 5.00, '2025-12-08 17:50:38', '2025-12-08 17:50:38');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `messages`
+--
+
+CREATE TABLE `messages` (
+  `id` int(11) NOT NULL,
+  `expediteur_id` int(11) NOT NULL,
+  `destinataire_id` int(11) NOT NULL,
+  `demande_id` int(11) DEFAULT NULL,
+  `message` text NOT NULL,
+  `lu` tinyint(1) DEFAULT 0,
+  `lu_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `messages`
+--
+
+INSERT INTO `messages` (`id`, `expediteur_id`, `destinataire_id`, `demande_id`, `message`, `lu`, `lu_at`, `created_at`) VALUES
+(1, 3, 2, 1, 'Bonjour, je suis intéressée par les livres pour enfants. Quand puis-je les récupérer ?', 1, '2025-12-08 19:31:04', '2025-12-08 17:50:38'),
+(2, 2, 3, 1, 'Bonjour, les livres sont disponibles ce week-end de 14h à 18h. Ça vous convient ?', 1, '2025-12-08 19:13:37', '2025-12-08 17:50:38'),
+(3, 2, 3, NULL, 'ok', 1, NULL, '2025-12-08 19:31:12'),
+(4, 3, 2, NULL, 'no', 0, NULL, '2025-12-08 19:31:52');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `nom` varchar(100) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `type` enum('donateur','beneficiaire','livreur','admin') NOT NULL,
+  `telephone` varchar(20) DEFAULT NULL,
+  `adresse` text DEFAULT NULL,
+  `ville` varchar(100) DEFAULT NULL,
+  `status` enum('active','inactive','pending') DEFAULT 'active',
+  `reset_token` varchar(100) DEFAULT NULL,
+  `reset_expires` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `users`
+--
+
+INSERT INTO `users` (`id`, `nom`, `email`, `password`, `type`, `telephone`, `adresse`, `ville`, `status`, `reset_token`, `reset_expires`, `created_at`, `updated_at`) VALUES
+(1, 'Administrateur', 'admin@ageofdonnation.org', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'admin', NULL, NULL, NULL, 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+(2, 'Jean Dupont', 'jean.dupont@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'donateur', '0123456789', NULL, 'Paris', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+(3, 'Marie Martin', 'marie.martin@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'beneficiaire', '0123456790', NULL, 'Lyon', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+(4, 'Pierre Durand', 'pierre.durand@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'livreur', '0123456791', NULL, 'Marseille', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+(5, 'aissa zahoum', 'aissazahoum6@gmail.com', '$2y$10$GnfODvHI6lW8ypnlH3HxzeW11sikV5aSrKDEBySbLLMbzoihkHZzO', 'donateur', '0649339948', NULL, NULL, 'active', NULL, NULL, '2025-12-08 18:01:22', '2025-12-08 18:01:22');
+
+--
+-- Index pour les tables déchargées
+--
+
+--
+-- Index pour la table `demandes`
+--
+ALTER TABLE `demandes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `beneficiaire_id` (`beneficiaire_id`),
+  ADD KEY `don_id` (`don_id`);
+
+--
+-- Index pour la table `dons`
+--
+ALTER TABLE `dons`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `donateur_id` (`donateur_id`);
+
+--
+-- Index pour la table `don_photos`
+--
+ALTER TABLE `don_photos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `don_id` (`don_id`);
+
+--
+-- Index pour la table `livraisons`
+--
+ALTER TABLE `livraisons`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `demande_id` (`demande_id`),
+  ADD KEY `livreur_id` (`livreur_id`);
+
+--
+-- Index pour la table `livreurs`
+--
+ALTER TABLE `livreurs`
+  ADD PRIMARY KEY (`user_id`);
+
+--
+-- Index pour la table `messages`
+--
+ALTER TABLE `messages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `expediteur_id` (`expediteur_id`),
+  ADD KEY `destinataire_id` (`destinataire_id`),
+  ADD KEY `demande_id` (`demande_id`);
+
+--
+-- Index pour la table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- AUTO_INCREMENT pour les tables déchargées
+--
+
+--
+-- AUTO_INCREMENT pour la table `demandes`
+--
+ALTER TABLE `demandes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT pour la table `dons`
+--
+ALTER TABLE `dons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT pour la table `don_photos`
+--
+ALTER TABLE `don_photos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `livraisons`
+--
+ALTER TABLE `livraisons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT pour la table `messages`
+--
+ALTER TABLE `messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT pour la table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- Contraintes pour les tables déchargées
+--
+
+--
+-- Contraintes pour la table `demandes`
+--
+ALTER TABLE `demandes`
+  ADD CONSTRAINT `demandes_ibfk_1` FOREIGN KEY (`beneficiaire_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `demandes_ibfk_2` FOREIGN KEY (`don_id`) REFERENCES `dons` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `dons`
+--
+ALTER TABLE `dons`
+  ADD CONSTRAINT `dons_ibfk_1` FOREIGN KEY (`donateur_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `don_photos`
+--
+ALTER TABLE `don_photos`
+  ADD CONSTRAINT `don_photos_ibfk_1` FOREIGN KEY (`don_id`) REFERENCES `dons` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `livraisons`
+--
+ALTER TABLE `livraisons`
+  ADD CONSTRAINT `livraisons_ibfk_1` FOREIGN KEY (`demande_id`) REFERENCES `demandes` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `livraisons_ibfk_2` FOREIGN KEY (`livreur_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Contraintes pour la table `livreurs`
+--
+ALTER TABLE `livreurs`
+  ADD CONSTRAINT `livreurs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `messages`
+--
+ALTER TABLE `messages`
+  ADD CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`expediteur_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`destinataire_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `messages_ibfk_3` FOREIGN KEY (`demande_id`) REFERENCES `demandes` (`id`) ON DELETE SET NULL;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 -- =============================================
 -- INFORMATIONS DE CONNEXION
 -- =============================================
