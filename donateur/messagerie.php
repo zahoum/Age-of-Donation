@@ -21,24 +21,32 @@ $selected_user_id = $_GET['user_id'] ?? null;
 $action = $_GET['action'] ?? '';
 
 // ========== إرسال رسالة ==========
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message']) && $selected_user_id) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' 
+    && isset($_POST['message'], $_POST['destinataire_id'])) {
+
     $message = trim($_POST['message']);
-    
+    $destinataire_id = (int) $_POST['destinataire_id'];
+
     if (!empty($message)) {
-        $query = "INSERT INTO messages (expediteur_id, destinataire_id, message, created_at) 
+        $query = "INSERT INTO messages 
+                  (expediteur_id, destinataire_id, message, created_at) 
                   VALUES (:expediteur_id, :destinataire_id, :message, NOW())";
+
         $stmt = $db->prepare($query);
         $stmt->bindParam(':expediteur_id', $user_id);
-        $stmt->bindParam(':destinataire_id', $selected_user_id);
+        $stmt->bindParam(':destinataire_id', $destinataire_id);
         $stmt->bindParam(':message', $message);
-        
+
         if ($stmt->execute()) {
-            // إعادة التوجيه بعد الإرسال
-            header("Location: ?user_id=" . $selected_user_id);
+            header("Location: ?user_id=" . $destinataire_id);
             exit();
         }
     }
 }
+if ($destinataire_id === $user_id) {
+    exit('Erreur');
+}
+
 
 // ========== جلب المحادثات ==========
 $query_conversations = "

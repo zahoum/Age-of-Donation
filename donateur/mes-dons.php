@@ -202,7 +202,7 @@ require_once '../includes/header.php';
                                             </a>
                                         <?php endif; ?>
                                         <?php if($don['nb_demandes'] > 0): ?>
-                                            <a href="demandes-don.php?don_id=<?php echo $don['id']; ?>" class="btn btn-sm btn-info">
+                                            <a href="confirmer-commandes.php?don_id=<?php echo $don['id']; ?>" class="btn btn-sm btn-info">
                                                 <i class="fas fa-file-alt"></i> الطلبات
                                             </a>
                                         <?php endif; ?>
