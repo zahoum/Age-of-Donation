@@ -143,43 +143,48 @@ CREATE TABLE contact_messages (
     status ENUM('new', 'read', 'replied', 'archived') DEFAULT 'new',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE (
+  email varchar(50) not null,
+  key varchar(58) not null,
+  expDate date 
+)
 -- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================
 
 -- Utilisateurs
-INSERT INTO `users` (`id`, `nom`, `email`, `password`, `type`, `telephone`, `adresse`, `ville`, `status`, `reset_token`, `reset_expires`, `created_at`, `updated_at`) VALUES
-(1, 'Administrateur', 'admin@ageofdonnation.org', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'admin', NULL, NULL, NULL, 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
-(2, 'Jean Dupont', 'jean.dupont@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'donateur', '0123456789', NULL, 'Paris', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
-(3, 'Marie Martin', 'marie.martin@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'beneficiaire', '0123456790', NULL, 'Lyon', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
-(4, 'Pierre Durand', 'pierre.durand@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'livreur', '0123456791', NULL, 'Marseille', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
-(5, 'aissa zahoum', 'aissazahoum6@gmail.com', '$2y$10$GnfODvHI6lW8ypnlH3HxzeW11sikV5aSrKDEBySbLLMbzoihkHZzO', 'donateur', '0649339948', NULL, NULL, 'active', NULL, NULL, '2025-12-08 18:01:22', '2025-12-08 18:01:22');
+-- INSERT INTO `users` (`id`, `nom`, `email`, `password`, `type`, `telephone`, `adresse`, `ville`, `status`, `reset_token`, `reset_expires`, `created_at`, `updated_at`) VALUES
+-- (1, 'Administrateur', 'admin@ageofdonnation.org', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'admin', NULL, NULL, NULL, 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+-- (2, 'Jean Dupont', 'jean.dupont@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'donateur', '0123456789', NULL, 'Paris', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+-- (3, 'Marie Martin', 'marie.martin@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'beneficiaire', '0123456790', NULL, 'Lyon', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+-- (4, 'Pierre Durand', 'pierre.durand@email.com', '$2y$10$/Hjf3UHjG4fmJxgvbnx.yOATlzaw/zsYO/5Y.VTX8Qkx46WlKz0t.', 'livreur', '0123456791', NULL, 'Marseille', 'active', NULL, NULL, '2025-12-08 17:50:38', '2025-12-08 19:07:26'),
+-- (5, 'aissa zahoum', 'aissazahoum6@gmail.com', '$2y$10$GnfODvHI6lW8ypnlH3HxzeW11sikV5aSrKDEBySbLLMbzoihkHZzO', 'donateur', '0649339948', NULL, NULL, 'active', NULL, NULL, '2025-12-08 18:01:22', '2025-12-08 18:01:22');
 
--- Dons
-INSERT INTO `dons` (`id`, `donateur_id`, `titre`, `description`, `photo_principale`, `categorie`, `etat`, `adresse_retrait`, `ville`, `statut`, `created_at`, `updated_at`) VALUES
-(1, 2, 'Livres pour enfants', 'Collection de livres jeunesse en bon état, idéale pour enfants de 3 à 8 ans.', NULL, 'livres', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38'),
-(2, 2, 'Vêtements femme taille M', 'Lot de vêtements femme taille M : robes, jupes, hauts. Très bon état.', NULL, 'vetements', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38'),
-(3, 2, 'Meuble TV en bois', 'Meuble télévision en bois massif, dimensions 120x40x50 cm. Quelques traces d usage.', NULL, 'meubles', 'usage', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38');
+-- -- Dons
+-- INSERT INTO `dons` (`id`, `donateur_id`, `titre`, `description`, `photo_principale`, `categorie`, `etat`, `adresse_retrait`, `ville`, `statut`, `created_at`, `updated_at`) VALUES
+-- (1, 2, 'Livres pour enfants', 'Collection de livres jeunesse en bon état, idéale pour enfants de 3 à 8 ans.', NULL, 'livres', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38'),
+-- (2, 2, 'Vêtements femme taille M', 'Lot de vêtements femme taille M : robes, jupes, hauts. Très bon état.', NULL, 'vetements', 'bon_etat', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38'),
+-- (3, 2, 'Meuble TV en bois', 'Meuble télévision en bois massif, dimensions 120x40x50 cm. Quelques traces d usage.', NULL, 'meubles', 'usage', '123 Avenue des Champs-Élysées', 'Paris', 'disponible', '2025-12-08 17:50:38', '2025-12-08 17:50:38');
 
--- Demandes
-INSERT INTO `demandes` (`id`, `beneficiaire_id`, `don_id`, `message_demande`, `statut`, `created_at`) VALUES
-(1, 3, 1, 'Bonjour, je suis intéressée par les livres pour enfants pour ma fille de 5 ans. Serait-il possible de les récupérer ce week-end ?', 'en_attente', '2025-12-08 17:50:38'),
-(2, 3, 2, 'Ces vêtements me seraient très utiles pour un entretien d embauche. Merci pour votre générosité.', 'en_attente', '2025-12-08 17:50:38');
+-- -- Demandes
+-- INSERT INTO `demandes` (`id`, `beneficiaire_id`, `don_id`, `message_demande`, `statut`, `created_at`) VALUES
+-- (1, 3, 1, 'Bonjour, je suis intéressée par les livres pour enfants pour ma fille de 5 ans. Serait-il possible de les récupérer ce week-end ?', 'en_attente', '2025-12-08 17:50:38'),
+-- (2, 3, 2, 'Ces vêtements me seraient très utiles pour un entretien d embauche. Merci pour votre générosité.', 'en_attente', '2025-12-08 17:50:38');
 
--- Livreurs
-INSERT INTO `livreurs` (`user_id`, `vehicule_type`, `plaque_immatriculation`, `zone_intervention`, `statut`, `note_moyenne`, `created_at`, `updated_at`) VALUES
-(4, 'voiture', 'AB-123-CD', 'Paris, Lyon, Marseille', 'actif', 5.00, '2025-12-08 17:50:38', '2025-12-08 17:50:38');
+-- -- Livreurs
+-- INSERT INTO `livreurs` (`user_id`, `vehicule_type`, `plaque_immatriculation`, `zone_intervention`, `statut`, `note_moyenne`, `created_at`, `updated_at`) VALUES
+-- (4, 'voiture', 'AB-123-CD', 'Paris, Lyon, Marseille', 'actif', 5.00, '2025-12-08 17:50:38', '2025-12-08 17:50:38');
 
--- Livraisons
-INSERT INTO `livraisons` (`id`, `demande_id`, `livreur_id`, `frais_livraison`, `statut`, `created_at`) VALUES
-(1, 1, 4, 0.00, 'en_attente', '2025-12-08 17:50:38');
+-- -- Livraisons
+-- INSERT INTO `livraisons` (`id`, `demande_id`, `livreur_id`, `frais_livraison`, `statut`, `created_at`) VALUES
+-- (1, 1, 4, 0.00, 'en_attente', '2025-12-08 17:50:38');
 
--- Messages
-INSERT INTO `messages` (`id`, `expediteur_id`, `destinataire_id`, `demande_id`, `message`, `lu`, `lu_at`, `created_at`) VALUES
-(1, 3, 2, 1, 'Bonjour, je suis intéressée par les livres pour enfants. Quand puis-je les récupérer ?', 1, '2025-12-08 19:31:04', '2025-12-08 17:50:38'),
-(2, 2, 3, 1, 'Bonjour, les livres sont disponibles ce week-end de 14h à 18h. Ça vous convient ?', 1, '2025-12-08 19:13:37', '2025-12-08 17:50:38'),
-(3, 2, 3, NULL, 'ok', 1, NULL, '2025-12-08 19:31:12'),
-(4, 3, 2, NULL, 'no', 0, NULL, '2025-12-08 19:31:52');
+-- -- Messages
+-- INSERT INTO `messages` (`id`, `expediteur_id`, `destinataire_id`, `demande_id`, `message`, `lu`, `lu_at`, `created_at`) VALUES
+-- (1, 3, 2, 1, 'Bonjour, je suis intéressée par les livres pour enfants. Quand puis-je les récupérer ?', 1, '2025-12-08 19:31:04', '2025-12-08 17:50:38'),
+-- (2, 2, 3, 1, 'Bonjour, les livres sont disponibles ce week-end de 14h à 18h. Ça vous convient ?', 1, '2025-12-08 19:13:37', '2025-12-08 17:50:38'),
+-- (3, 2, 3, NULL, 'ok', 1, NULL, '2025-12-08 19:31:12'),
+-- (4, 3, 2, NULL, 'no', 0, NULL, '2025-12-08 19:31:52');
 
 -- =============================================
 -- INFORMATIONS DE CONNEXION
