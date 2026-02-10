@@ -57,6 +57,5 @@ function checkAuth($allowed_types = []) {
         }
     }
 }
-// For development/testing, you can add these SMTP settings
 
 ?>
