@@ -43,7 +43,8 @@ if ($is_in_subdir) {
     $auth_path = 'auth/';
 }
 
-// تحديد مسارات كل نوع مستخدم
+// تحديد مسارات كل نوع مستخدم - فقط إذا كان المستخدم مسجل دخول
+$user_base = ''; // تهيئة متغير user_base
 if ($is_logged_in) {
     if ($user_type == 'beneficiaire') {
         $user_base = $base_path . 'beneficiaire/';
@@ -167,11 +168,12 @@ if ($is_logged_in) {
             display: flex;
             align-items: center;
             gap: 15px;
+            position: relative;
         }
         
         .user-avatar {
-            width: 42px;
-            height: 42px;
+            width: 45px;
+            height: 45px;
             background: linear-gradient(135deg, #00b894, #00cec9);
             border-radius: 50%;
             display: flex;
@@ -179,27 +181,56 @@ if ($is_logged_in) {
             justify-content: center;
             color: white;
             font-weight: 600;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        
-        .logout-btn {
-            background: none;
-            border: 1px solid #ddd;
-            padding: 8px 20px;
-            border-radius: 6px;
-            color: var(--secondary);
+            font-size: 18px;
             cursor: pointer;
             transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
         
-        .logout-btn:hover {
-            background: #ffeaa7;
-            border-color: #fdcb6e;
-            color: #d63031;
+        .user-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.3);
+        }
+        
+        .user-dropdown {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        .user-dropdown.active {
+            display: block;
+        }
+        
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            text-decoration: none;
+            color: var(--dark);
+            border-bottom: 1px solid #f1f2f6;
+            transition: all 0.3s;
+        }
+        
+        .user-dropdown-item:hover {
+            background: #f8f9fa;
+            color: var(--accent);
+        }
+        
+        .user-dropdown-item:last-child {
+            border-bottom: none;
+            color: var(--danger);
+        }
+        
+        .user-dropdown-item:last-child:hover {
+            background: #ffebee;
         }
         
         /* Main Content */
@@ -639,6 +670,7 @@ if ($is_logged_in) {
                     
                 <?php endif; ?>
             <?php else: ?>
+                <!-- Links for non-logged-in users -->
                 <li class="nav-item"><a href="<?php echo $base_path; ?>index.php" class="nav-link"><i class="fas fa-home"></i> الرئيسية</a></li>
                 <li class="nav-item"><a href="<?php echo $auth_path; ?>login.php" class="nav-link"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a></li>
                 <li class="nav-item"><a href="<?php echo $auth_path; ?>signup.php" class="nav-link"><i class="fas fa-user-plus"></i> إنشاء حساب</a></li>
@@ -647,13 +679,39 @@ if ($is_logged_in) {
         
         <div class="user-menu">
             <?php if($is_logged_in): ?>
-                <div class="user-avatar" title="<?php echo htmlspecialchars($user_nom); ?>">
+                <div class="user-avatar" onclick="toggleDropdown()" title="<?php echo htmlspecialchars($user_nom); ?>">
                     <?php echo strtoupper(substr($user_nom, 0, 1)); ?>
                 </div>
-                <a href="<?php echo $auth_path; ?>logout.php" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    تسجيل الخروج
-                </a>
+                <div class="user-dropdown" id="userDropdown">
+                    <?php if(!empty($user_base)): ?>
+                        <a href="<?php echo $user_base; ?>profile.php" class="user-dropdown-item">
+                            <i class="fas fa-user"></i> الملف الشخصي
+                        </a>
+                        <?php if($user_type == 'beneficiaire'): ?>
+                            <a href="<?php echo $user_base; ?>mes-demandes.php" class="user-dropdown-item">
+                                <i class="fas fa-file-alt"></i> طلباتي
+                            </a>
+                        <?php elseif($user_type == 'donateur'): ?>
+                            <a href="<?php echo $user_base; ?>mes-dons.php" class="user-dropdown-item">
+                                <i class="fas fa-boxes"></i> تبرعاتي
+                            </a>
+                        <?php elseif($user_type == 'admin'): ?>
+                            <a href="<?php echo $user_base; ?>utilisateurs.php" class="user-dropdown-item">
+                                <i class="fas fa-users"></i> المستخدمون
+                            </a>
+                        <?php elseif($user_type == 'livreur'): ?>
+                            <a href="<?php echo $user_base; ?>missions.php" class="user-dropdown-item">
+                                <i class="fas fa-tasks"></i> المهام
+                            </a>
+                        <?php endif; ?>
+                        <a href="<?php echo $user_base; ?>messagerie.php" class="user-dropdown-item">
+                            <i class="fas fa-comments"></i> المراسلة
+                        </a>
+                    <?php endif; ?>
+                    <a href="<?php echo $auth_path; ?>logout.php" class="user-dropdown-item">
+                        <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                    </a>
+                </div>
             <?php else: ?>
                 <a href="<?php echo $auth_path; ?>login.php" class="btn btn-outline">تسجيل الدخول</a>
                 <a href="<?php echo $auth_path; ?>signup.php" class="btn btn-primary">إنشاء حساب</a>
@@ -671,13 +729,28 @@ function toggleMenu() {
     navLinks.classList.toggle('active');
 }
 
+function toggleDropdown() {
+    const dropdown = document.getElementById('userDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('active');
+    }
+}
+
 // إغلاق القائمة عند النقر خارجها
 document.addEventListener('click', function(event) {
     const navLinks = document.getElementById('navLinks');
     const menuToggle = document.querySelector('.menu-toggle');
+    const userDropdown = document.getElementById('userDropdown');
+    const userAvatar = document.querySelector('.user-avatar');
     
+    // إغلاق قائمة التنقل
     if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
         navLinks.classList.remove('active');
+    }
+    
+    // إغلاق قائمة المستخدم
+    if (userDropdown && userAvatar && !userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
+        userDropdown.classList.remove('active');
     }
 });
 </script>

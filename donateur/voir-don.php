@@ -206,7 +206,7 @@ require_once '../includes/header.php';
                                     <i class="fas fa-calendar"></i> <?php echo date('d/m/Y H:i', strtotime($demande['created_at'])); ?>
                                 </small>
                             </div>
-                            <a href="demandes-don.php?demande_id=<?php echo $demande['id']; ?>" class="btn btn-sm btn-outline">
+                            <a href="demandes-don.php" class="btn btn-sm btn-outline">
                                 <i class="fas fa-eye"></i> عرض التفاصيل
                             </a>
                         </div>

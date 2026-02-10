@@ -807,9 +807,6 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                         </div>
                         
                         <div class="chat-actions">
-                            <button class="chat-btn" title="معلومات">
-                                <i class="fas fa-info-circle"></i>
-                            </button>
                             <button class="chat-btn" onclick="window.location.reload()" title="تحديث">
                                 <i class="fas fa-redo"></i>
                             </button>

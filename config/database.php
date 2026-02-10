@@ -1,6 +1,11 @@
 <?php
 // config/database.php
-
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_PORT', 587);
+define('SMTP_USERNAME', 'aissazahohum6@gmail.com');
+define('SMTP_PASSWORD', 'a.zahoum8425@uca.ac');
+define('SMTP_FROM', 'a.zahoum8425@uca.ac.ma');
+define('SMTP_FROM_NAME', 'Age of Donnation');
 // بدء الجلسة فقط إذا لم تكن قد بدأت
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -52,4 +57,6 @@ function checkAuth($allowed_types = []) {
         }
     }
 }
+// For development/testing, you can add these SMTP settings
+
 ?>

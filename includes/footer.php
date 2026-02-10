@@ -10,9 +10,9 @@
             <p>© 2024 Age of Donnation. جميع الحقوق محفوظة.</p>
             <p>منصة التبرعات الأولى في المغرب | مبني على العمل التطوعي</p>
             <p style="margin-top: 20px; font-size: 14px;">
-                <a href="#" style="color: #74b9ff; margin: 0 10px;">سياسة الخصوصية</a>
-                <a href="#" style="color: #74b9ff; margin: 0 10px;">شروط الاستخدام</a>
-                <a href="#" style="color: #74b9ff; margin: 0 10px;">اتصل بنا</a>
+                <a href="../includes/privacy-policy.php" style="color: #74b9ff; margin: 0 10px;">سياسة الخصوصية</a>
+                <a href="../includes/terms-of-service.php" style="color: #74b9ff; margin: 0 10px;">شروط الاستخدام</a>
+                <a href="../includes/contact-us.php" style="color: #74b9ff; margin: 0 10px;">اتصل بنا</a>
             </p>
         </div>
     </footer>

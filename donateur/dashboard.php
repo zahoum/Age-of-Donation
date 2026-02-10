@@ -115,7 +115,7 @@ require_once '../includes/header.php';
         </a>
     </div>
     <div class="col-3">
-        <a href="../auth/logout.php" class="card" style="text-decoration: none; color: inherit; text-align: center; padding: 25px;">
+        <a href="profile.php" class="card" style="text-decoration: none; color: inherit; text-align: center; padding: 25px;">
             <div style="font-size: 40px; color: var(--danger); margin-bottom: 15px;">
                 <i class="fas fa-cog"></i>
             </div>

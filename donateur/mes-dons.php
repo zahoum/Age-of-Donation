@@ -193,9 +193,7 @@ require_once '../includes/header.php';
                                             <i class="fas fa-eye"></i> عرض
                                         </a>
                                         <?php if($don['statut'] == 'disponible'): ?>
-                                            <a href="modifier-don.php?id=<?php echo $don['id']; ?>" class="btn btn-sm btn-warning">
-                                                <i class="fas fa-edit"></i> تعديل
-                                            </a>
+                                            
                                             <a href="?action=delete&id=<?php echo $don['id']; ?>" class="btn btn-sm btn-danger" 
                                                onclick="return confirm('هل أنت متأكد من حذف هذا التبرع؟')">
                                                 <i class="fas fa-trash"></i> حذف
