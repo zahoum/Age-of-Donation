@@ -30,7 +30,7 @@ $stats_stmt = $db->prepare($stats_query);
 $stats_stmt->execute();
 $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
 
-// Get recent donations
+// Get recent of donstion
 $dons_query = "
     SELECT d.*, u.nom as donateur_nom, u.email as donateur_email 
     FROM dons d 
