@@ -75,19 +75,19 @@ $stmt_conv->bindParam(':user_id', $user_id);
 $stmt_conv->execute();
 $conversations = $stmt_conv->fetchAll(PDO::FETCH_ASSOC);
 
-// ========== جلب الرسائل ==========
+// get massages
 $messages = [];
 $other_user = null;
 
 if ($selected_user_id) {
-    // جلب معلومات المستخدم الآخر
+        // get the inforamtion of secand user
     $query_user = "SELECT id, nom, type FROM users WHERE id = :id";
     $stmt_user = $db->prepare($query_user);
     $stmt_user->bindParam(':id', $selected_user_id);
     $stmt_user->execute();
     $other_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
     
-    // جلب الرسائل
+    // Gat messaged 
     $query_messages = "
         SELECT m.*, u.nom as sender_name 
         FROM messages m 
@@ -103,7 +103,7 @@ if ($selected_user_id) {
     $stmt_msg->execute();
     $messages = $stmt_msg->fetchAll(PDO::FETCH_ASSOC);
     
-    // تحديث حالة القراءة
+    // Reaload Read State
     $query_update = "UPDATE messages SET lu = 1 
                     WHERE destinataire_id = :user_id AND expediteur_id = :other_id AND lu = 0";
     $stmt_update = $db->prepare($query_update);
@@ -112,7 +112,7 @@ if ($selected_user_id) {
     $stmt_update->execute();
 }
 
-// ========== البحث ==========
+    //search
 $search_results = [];
 if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
     $search = '%' . $_GET['search'] . '%';
@@ -934,9 +934,9 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
         scrollToBottom();
         
         // Auto-refresh every 30 seconds if in chat
+        // i'm aissa zahoum and i will tronsforme the chat section in the donation to real time chat in version 1.2
         <?php if($selected_user_id): ?>
         setInterval(function() {
-            // يمكن إضافة AJAX هنا لجلب الرسائل الجديدة
             // fetch('?user_id=<?php echo $selected_user_id; ?>&refresh=true')
         }, 30000);
         <?php endif; ?>
