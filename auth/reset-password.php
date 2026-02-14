@@ -23,7 +23,7 @@ $error = '';
             <div class="col-md-4">
                 <h2>إعادة تعيين كلمة المرور</h2>
                 <?php 
-
+                // Take the key email and section to send 
                     if(isset($_GET["key"]) && isset($_GET["email"]) && isset($_GET["action"]) && ($_GET["action"] == "reset")) {
                         $key = $_GET["key"];
                         $email  = $_GET["email"];
@@ -31,6 +31,7 @@ $error = '';
                         $sel_query = 'SELECT * FROM `password_reset_temp` WHERE `key`="'.$key.'" AND `email`="'.$email.'"';
                         $result = mysqli_query($conn, $sel_query);
                         $row = mysqli_num_rows($result);
+
                         if ($row == 0) {
                             echo '<div class="alert alert-danger"><strong>خطأ!</strong> رابط غير صالح.</div>';
                         } else {
@@ -81,6 +82,7 @@ $error = '';
                     }
                     ?>
             </div>
+            
             <div class="col-md-4"></div>
         </div>
     </div>
