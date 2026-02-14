@@ -9,7 +9,7 @@ $db = $database->getConnection();
 
 $error = '';
 $success = '';
-
+// the prepare variables
 if ($_POST) {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
