@@ -5,6 +5,7 @@ checkAuth(['admin']);
 $database = new Database();
 $db = $database->getConnection();
 
+
 // Récupérer tous les livreurs
 $query = "
     SELECT u.*, l.vehicule_type, l.plaque_immatriculation, l.zone_intervention, l.statut as livreur_statut, l.note_moyenne

@@ -2,6 +2,7 @@
 require_once '../config/database.php';
 checkAuth(['admin']);
 
+
 $database = new Database();
 $db = $database->getConnection();
 
