@@ -88,7 +88,8 @@ if ($_POST) {
 $stats_query = "
     SELECT 
         COUNT(*) as total_demandes,
-        SUM(CASE WHEN statut = 'acceptee' THEN 1 ELSE 0 END) as demandes_acceptees
+        SUM(CASE WHEN statut = 'acceptee' THEN 1 ELSE 0 END) as demandes_acceptees,
+        SUM(CASE WHEN statut = 'en_attente' THEN 1 ELSE 0 END) as demandes_attente
     FROM demandes 
     WHERE beneficiaire_id = :user_id
 ";
@@ -134,7 +135,7 @@ $page_title = 'الملف الشخصي';
             line-height: 1.6;
         }
         
-        /* Navbar - نفس التصميم السابق */
+        /* Navbar */
         .navbar {
             background: white;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -276,6 +277,125 @@ $page_title = 'الملف الشخصي';
             background: #ffebee;
         }
         
+        /* Welcome Section - Beautiful Blue Design */
+        .welcome-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .welcome-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+            animation: rotate 25s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .welcome-text {
+            flex: 1;
+        }
+
+        .welcome-text h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-text p {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .welcome-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .welcome-stat {
+            text-align: center;
+        }
+
+        .welcome-stat .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .welcome-stat .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .welcome-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+        
         /* Main Content */
         .main-content {
             margin-top: 90px;
@@ -288,40 +408,6 @@ $page_title = 'الملف الشخصي';
             max-width: 1000px;
             margin: 0 auto;
             padding: 0 15px;
-        }
-        
-        /* Page Header */
-        .page-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 0;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.1);
-        }
-        
-        .page-header h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
-            position: relative;
-        }
-        
-        .page-header p {
-            font-size: 18px;
-            opacity: 0.9;
-            position: relative;
         }
         
         /* Cards */
@@ -512,7 +598,7 @@ $page_title = 'الملف الشخصي';
         }
         
         /* Stats Cards */
-        .stats-grid {
+        .stats-grid-small {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
@@ -536,29 +622,6 @@ $page_title = 'الملف الشخصي';
             margin: 5px 0 0;
             color: var(--secondary);
             font-size: 13px;
-        }
-        
-        @media (max-width: 768px) {
-            .profile-container {
-                flex-direction: column;
-            }
-            
-            .profile-sidebar {
-                width: 100%;
-            }
-            
-            .navbar {
-                padding: 0 15px;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-            
-            .main-content {
-                margin-top: 80px;
-                padding: 15px;
-            }
         }
         
         /* Tabs */
@@ -593,6 +656,71 @@ $page_title = 'الملف الشخصي';
         .tab-content.active {
             display: block;
         }
+        
+        @media (max-width: 768px) {
+            .profile-container {
+                flex-direction: column;
+            }
+            
+            .profile-sidebar {
+                width: 100%;
+            }
+            
+            .navbar {
+                padding: 0 15px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .main-content {
+                margin-top: 80px;
+                padding: 15px;
+            }
+            
+            .welcome-text h1 {
+                font-size: 28px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+                border-bottom: none;
+            }
+            
+            .tab {
+                text-align: center;
+                border-bottom: 1px solid #eee;
+            }
+        }
+        
+        /* Mobile Menu Toggle */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--primary);
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+            
+            .nav-links.active {
+                display: flex;
+                flex-direction: column;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: white;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -605,7 +733,9 @@ $page_title = 'الملف الشخصي';
             <span>Age of Donnation</span>
         </a>
         
-        
+        <button class="menu-toggle" onclick="toggleMenu()">
+            <i class="fas fa-bars"></i>
+        </button>
         
         <ul class="nav-links" id="navLinks">
             <li class="nav-item"><a href="dashboard.php" class="nav-link"><i class="fas fa-home"></i> لوحة التحكم</a></li>
@@ -639,10 +769,18 @@ $page_title = 'الملف الشخصي';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1><i class="fas fa-user-circle"></i> الملف الشخصي</h1>
-                <p>إدارة معلومات حسابك وإعداداتك</p>
+            <!-- Beautiful Blue Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="welcome-text">
+                        <h1>مرحبًا بك في ملفك الشخصي</h1>
+                        <p>إدارة معلومات حسابك وإعداداتك</p>
+                        
+                    </div>
+                </div>
             </div>
 
             <?php if($success): ?>
@@ -686,7 +824,7 @@ $page_title = 'الملف الشخصي';
                             </div>
                         </div>
                         
-                        <div class="stats-grid">
+                        <div class="stats-grid-small">
                             <div class="stat-card-small">
                                 <h4><?php echo $stats['total_demandes'] ?? 0; ?></h4>
                                 <p>طلبات</p>
@@ -719,9 +857,9 @@ $page_title = 'الملف الشخصي';
                 <!-- Main Content -->
                 <div class="profile-main">
                     <div class="tabs">
-                        <div class="tab active" onclick="switchTab('personal')">المعلومات الشخصية</div>
-                        <div class="tab" onclick="switchTab('password')">كلمة المرور</div>
-                        <div class="tab" onclick="switchTab('activity')">النشاط</div>
+                        <div class="tab active" onclick="switchTab('personal', event)">المعلومات الشخصية</div>
+                        <div class="tab" onclick="switchTab('password', event)">كلمة المرور</div>
+                        <div class="tab" onclick="switchTab('activity', event)">النشاط</div>
                     </div>
                     
                     <!-- Personal Info Tab -->
@@ -802,7 +940,7 @@ $page_title = 'الملف الشخصي';
                             <div class="card-body">
                                 <h4 style="margin-bottom: 20px;">إحصائيات طلباتك</h4>
                                 
-                                <div class="stats-grid">
+                                <div class="stats-grid-small">
                                     <div class="stat-card-small">
                                         <h4><?php echo $stats['total_demandes'] ?? 0; ?></h4>
                                         <p>إجمالي الطلبات</p>
@@ -811,10 +949,9 @@ $page_title = 'الملف الشخصي';
                                         <h4><?php echo $stats['demandes_acceptees'] ?? 0; ?></h4>
                                         <p>طلبات مقبولة</p>
                                     </div>
-                                    <div style="grid-column: span 2;">
-                                        <p style="text-align: center; color: #666; margin-top: 20px;">
-                                            <i class="fas fa-info-circle"></i> هذه الإحصائيات تعتمد على طلباتك في النظام
-                                        </p>
+                                    <div class="stat-card-small">
+                                        <h4><?php echo $stats['demandes_attente'] ?? 0; ?></h4>
+                                        <p>في الانتظار</p>
                                     </div>
                                 </div>
                                 
@@ -847,7 +984,7 @@ $page_title = 'الملف الشخصي';
         dropdown.classList.toggle('active');
     }
     
-    function switchTab(tabName) {
+    function switchTab(tabName, event) {
         // تحديد الألسنة
         document.querySelectorAll('.tab').forEach(tab => {
             tab.classList.remove('active');
@@ -861,7 +998,7 @@ $page_title = 'الملف الشخصي';
         document.getElementById(tabName + 'Tab').classList.add('active');
     }
     
-    // إغلاق القوائم عند النقر خارجها
+    // Close menus when clicking outside
     document.addEventListener('click', function(event) {
         const navLinks = document.getElementById('navLinks');
         const menuToggle = document.querySelector('.menu-toggle');

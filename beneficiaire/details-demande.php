@@ -59,6 +59,20 @@ if (!$demande) {
     exit();
 }
 
+// إحصائيات للـ Welcome Section
+$stats_query = "
+    SELECT 
+        COUNT(*) as total_demandes,
+        SUM(CASE WHEN statut = 'acceptee' THEN 1 ELSE 0 END) as demandes_acceptees,
+        SUM(CASE WHEN statut = 'en_attente' THEN 1 ELSE 0 END) as demandes_attente
+    FROM demandes 
+    WHERE beneficiaire_id = :user_id
+";
+$stats_stmt = $db->prepare($stats_query);
+$stats_stmt->bindParam(":user_id", $user_id);
+$stats_stmt->execute();
+$stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+
 $page_title = 'تفاصيل الطلب';
 ?>
 
@@ -96,7 +110,7 @@ $page_title = 'تفاصيل الطلب';
             line-height: 1.6;
         }
         
-        /* Navbar - نفس تصميم dashboard */
+        /* Navbar */
         .navbar {
             background: white;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -238,6 +252,125 @@ $page_title = 'تفاصيل الطلب';
             background: #ffebee;
         }
         
+        /* Welcome Section - Beautiful Blue Design */
+        .welcome-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .welcome-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+            animation: rotate 25s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .welcome-text {
+            flex: 1;
+        }
+
+        .welcome-text h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-text p {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .welcome-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .welcome-stat {
+            text-align: center;
+        }
+
+        .welcome-stat .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .welcome-stat .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .welcome-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+        
         /* Main Content */
         .main-content {
             margin-top: 90px;
@@ -250,40 +383,6 @@ $page_title = 'تفاصيل الطلب';
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
-        }
-        
-        /* Page Header */
-        .page-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 0;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.1);
-        }
-        
-        .page-header h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
-            position: relative;
-        }
-        
-        .page-header p {
-            font-size: 18px;
-            opacity: 0.9;
-            position: relative;
         }
         
         /* Cards */
@@ -406,6 +505,11 @@ $page_title = 'تفاصيل الطلب';
             color: #0288d1;
         }
         
+        .badge-danger {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
         /* Grid System */
         .row {
             display: flex;
@@ -431,7 +535,7 @@ $page_title = 'تفاصيل الطلب';
                 padding: 15px;
             }
             
-            .page-header h1 {
+            .welcome-text h1 {
                 font-size: 28px;
             }
             
@@ -468,6 +572,57 @@ $page_title = 'تفاصيل الطلب';
                 box-shadow: 0 5px 15px rgba(0,0,0,0.1);
                 padding: 20px;
             }
+        }
+        
+        /* Status Styles */
+        .status-container {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .status-badge-large {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: 2px solid;
+            background: rgba(0,0,0,0.02);
+        }
+        
+        .status-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+        
+        .status-label {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* Timeline */
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .timeline-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-left: 15px;
+        }
+        
+        .timeline-dot.completed {
+            background: #00b894;
+        }
+        
+        .timeline-dot.pending {
+            background: #ddd;
         }
     </style>
 </head>
@@ -516,10 +671,17 @@ $page_title = 'تفاصيل الطلب';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1><i class="fas fa-file-alt"></i> تفاصيل الطلب</h1>
-                <p>معلومات كاملة عن طلب التبرع الخاص بك</p>
+            <!-- Beautiful Blue Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="welcome-text">
+                        <h1>تفاصيل الطلب <?php echo $demande['id']; ?></h1>
+                        <p>معلومات كاملة عن طلب التبرع الخاص بك</p>
+                    </div>
+                </div>
             </div>
 
             <div class="row">
@@ -576,7 +738,7 @@ $page_title = 'تفاصيل الطلب';
                         </div>
                         <div class="card-body">
                             <!-- Status Badge -->
-                            <div style="text-align: center; margin-bottom: 25px;">
+                            <div class="status-container">
                                 <?php 
                                 $statusColors = [
                                     'en_attente' => ['color' => '#fdcb6e', 'icon' => '⏳', 'label' => 'في الانتظار'],
@@ -586,9 +748,9 @@ $page_title = 'تفاصيل الطلب';
                                 ];
                                 $status = $statusColors[$demande['statut']] ?? ['color' => '#aaa', 'icon' => '📝', 'label' => $demande['statut']];
                                 ?>
-                                <div style="display: inline-block; padding: 15px 30px; background: <?php echo $status['color']; ?>20; border-radius: 10px; border: 2px solid <?php echo $status['color']; ?>;">
-                                    <div style="font-size: 30px; margin-bottom: 10px;"><?php echo $status['icon']; ?></div>
-                                    <h4 style="margin: 0; color: <?php echo $status['color']; ?>;"><?php echo $status['label']; ?></h4>
+                                <div class="status-badge-large" style="border-color: <?php echo $status['color']; ?>; background: <?php echo $status['color']; ?>20;">
+                                    <div class="status-icon"><?php echo $status['icon']; ?></div>
+                                    <h4 class="status-label" style="color: <?php echo $status['color']; ?>;"><?php echo $status['label']; ?></h4>
                                 </div>
                             </div>
                             
@@ -604,8 +766,8 @@ $page_title = 'تفاصيل الطلب';
                             <div style="margin-top: 30px;">
                                 <h5><i class="fas fa-history"></i> تتبع الطلب</h5>
                                 <div style="margin-top: 15px;">
-                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                                        <div style="width: 30px; height: 30px; background: #00b894; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin-left: 15px;">
+                                    <div class="timeline-item">
+                                        <div class="timeline-dot completed">
                                             <i class="fas fa-check"></i>
                                         </div>
                                         <div>
@@ -616,8 +778,8 @@ $page_title = 'تفاصيل الطلب';
                                         </div>
                                     </div>
                                     
-                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                                        <div style="width: 30px; height: 30px; background: <?php echo $demande['statut'] != 'en_attente' ? '#00b894' : '#ddd'; ?>; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin-left: 15px;">
+                                    <div class="timeline-item">
+                                        <div class="timeline-dot <?php echo $demande['statut'] != 'en_attente' ? 'completed' : 'pending'; ?>">
                                             <i class="fas fa-user-check"></i>
                                         </div>
                                         <div>
@@ -628,8 +790,8 @@ $page_title = 'تفاصيل الطلب';
                                         </div>
                                     </div>
                                     
-                                    <div style="display: flex; align-items: center;">
-                                        <div style="width: 30px; height: 30px; background: <?php echo $demande['statut'] == 'acceptee' ? '#00b894' : '#ddd'; ?>; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin-left: 15px;">
+                                    <div class="timeline-item">
+                                        <div class="timeline-dot <?php echo $demande['statut'] == 'acceptee' ? 'completed' : 'pending'; ?>">
                                             <i class="fas fa-handshake"></i>
                                         </div>
                                         <div>
@@ -751,7 +913,7 @@ $page_title = 'تفاصيل الطلب';
         navLinks.classList.toggle('active');
     }
     
-    // إغلاق القوائم عند النقر خارجها
+    // Close menus when clicking outside
     document.addEventListener('click', function(event) {
         const navLinks = document.getElementById('navLinks');
         const menuToggle = document.querySelector('.menu-toggle');

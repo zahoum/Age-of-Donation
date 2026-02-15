@@ -20,7 +20,6 @@ $stmt_user->bindParam(":user_id", $user_id);
 $stmt_user->execute();
 $current_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
-// باقي الكود كما هو...
 $success = '';
 $error = '';
 
@@ -153,7 +152,7 @@ $page_title = 'طلباتي';
             line-height: 1.6;
         }
         
-        /* Navbar - نفس تصميم dashboard */
+        /* Navbar */
         .navbar {
             background: white;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -295,6 +294,125 @@ $page_title = 'طلباتي';
             background: #ffebee;
         }
         
+        /* Welcome Section - Beautiful Blue Design */
+        .welcome-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .welcome-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+            animation: rotate 25s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .welcome-text {
+            flex: 1;
+        }
+
+        .welcome-text h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-text p {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .welcome-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .welcome-stat {
+            text-align: center;
+        }
+
+        .welcome-stat .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .welcome-stat .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .welcome-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+        
         /* Main Content */
         .main-content {
             margin-top: 90px;
@@ -307,40 +425,6 @@ $page_title = 'طلباتي';
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
-        }
-        
-        /* Page Header */
-        .page-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 0;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.1);
-        }
-        
-        .page-header h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
-            position: relative;
-        }
-        
-        .page-header p {
-            font-size: 18px;
-            opacity: 0.9;
-            position: relative;
         }
         
         /* Cards */
@@ -432,6 +516,11 @@ $page_title = 'طلباتي';
         .btn-outline:hover {
             background: var(--accent);
             color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 13px;
         }
         
         /* Stats Cards */
@@ -571,6 +660,18 @@ $page_title = 'طلباتي';
         .col-7 { flex: 0 0 58.333%; max-width: 58.333%; padding: 0 15px; }
         .col-8 { flex: 0 0 66.666%; max-width: 66.666%; padding: 0 15px; }
         
+        /* Demandes List */
+        .demande-item {
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            transition: all 0.3s;
+        }
+        
+        .demande-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
         @media (max-width: 768px) {
             .navbar {
                 padding: 0 15px;
@@ -585,7 +686,7 @@ $page_title = 'طلباتي';
                 padding: 15px;
             }
             
-            .page-header h1 {
+            .welcome-text h1 {
                 font-size: 28px;
             }
             
@@ -648,7 +749,7 @@ $page_title = 'طلباتي';
             <li class="nav-item"><a href="catalogue.php" class="nav-link"><i class="fas fa-box-open"></i> الكتالوج</a></li>
             <li class="nav-item"><a href="mes-demandes.php" class="nav-link active"><i class="fas fa-file-alt"></i> طلباتي</a></li>
             <li class="nav-item"><a href="messagerie.php" class="nav-link"><i class="fas fa-comments"></i> المراسلة</a></li>
-                  </ul>
+        </ul>
         
         <div class="user-menu">
             <div class="user-avatar" onclick="toggleDropdown()" title="الملف الشخصي">
@@ -674,10 +775,17 @@ $page_title = 'طلباتي';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1><i class="fas fa-file-alt"></i> طلباتي</h1>
-                <p>تابع حالة طلبات التبرعات الخاصة بك</p>
+            <!-- Beautiful Blue Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="welcome-text">
+                        <h1>مرحبًا بك في صفحة طلباتك</h1>
+                        <p>تابع حالة جميع طلبات التبرعات الخاصة بك</p>
+                    </div>
+                </div>
             </div>
 
             <?php if($success): ?>
@@ -688,7 +796,7 @@ $page_title = 'طلباتي';
                 <div class="alert alert-danger"><?php echo $error; ?></div>
             <?php endif; ?>
 
-            <!-- Statistics -->
+            <!-- Statistics Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #74b9ff, #0984e3);">
@@ -714,7 +822,7 @@ $page_title = 'طلباتي';
                     </div>
                     <div class="stat-content">
                         <h3><?php echo $stats['acceptees'] ?? 0; ?></h3>
-                        <p>مؤكدة</p>
+                        <p>مقبولة</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -738,7 +846,7 @@ $page_title = 'طلباتي';
                                 <select id="statusFilter" class="form-control">
                                     <option value="">جميع الحالات</option>
                                     <option value="en_attente">في الانتظار</option>
-                                    <option value="acceptee">مؤكدة</option>
+                                    <option value="acceptee">مقبولة</option>
                                     <option value="refusee">مرفوضة</option>
                                 </select>
                             </div>
@@ -793,8 +901,7 @@ $page_title = 'طلباتي';
                             <div class="card demande-item" 
                                  data-statut="<?php echo $demande['statut']; ?>" 
                                  data-categorie="<?php echo $demande['categorie']; ?>"
-                                 data-titre="<?php echo htmlspecialchars(strtolower($demande['don_titre'])); ?>"
-                                 style="margin-bottom: 20px;">
+                                 data-titre="<?php echo htmlspecialchars(strtolower($demande['don_titre'])); ?>">
                                 <div class="card-body">
                                     <div class="row">
                                         <!-- Don Image -->
@@ -864,8 +971,8 @@ $page_title = 'طلباتي';
                                                 
                                                 $statusLabels = [
                                                     'en_attente' => 'في الانتظار',
-                                                    'acceptee' => 'تم التأكيد',
-                                                    'refusee' => 'مرفوض'
+                                                    'acceptee' => 'مقبولة',
+                                                    'refusee' => 'مرفوضة'
                                                 ];
                                                 $statusText = $statusLabels[$demande['statut']] ?? $demande['statut'];
                                                 ?>
@@ -924,7 +1031,7 @@ $page_title = 'طلباتي';
                                     <div class="col-3">
                                         <div style="text-align: center;">
                                             <h3 style="color: #00b894;"><?php echo $stats['acceptees'] ?? 0; ?></h3>
-                                            <p style="color: var(--secondary);">مؤكدة</p>
+                                            <p style="color: var(--secondary);">مقبولة</p>
                                         </div>
                                     </div>
                                     <div class="col-3">
@@ -997,7 +1104,7 @@ $page_title = 'طلباتي';
         categoryFilter.addEventListener('change', filterDemandes);
         searchInput.addEventListener('input', filterDemandes);
         
-        // إغلاق القوائم عند النقر خارجها
+        // Close menus when clicking outside
         document.addEventListener('click', function(event) {
             const navLinks = document.getElementById('navLinks');
             const menuToggle = document.querySelector('.menu-toggle');
