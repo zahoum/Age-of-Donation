@@ -1,6 +1,6 @@
 <?php
 require_once '../config/database.php';
-require_once '../includes/header.php'; // Inclusion du header
+require_once '../includes/header.php';
 
 checkAuth(['livreur']);
 
@@ -17,7 +17,7 @@ $stmt->execute();
 $livreur = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$livreur) {
-    echo '<div class="alert alert-warning" style="margin: 20px;">Votre compte livreur n\'est pas encore activé par l\'administrateur.</div>';
+    echo '<div class="alert alert-warning" style="margin: 20px;">حساب المندوب الخاص بك لم يتم تفعيله بعد من قبل المسؤول</div>';
     include '../includes/footer.php';
     exit;
 }
@@ -58,8 +58,8 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <!-- Dashboard Header -->
 <div class="dashboard-header">
-    <h1>Bienvenue sur votre espace Livreur</h1>
-    <p>Gérez vos missions de livraison</p>
+    <h1>مرحباً بك في مساحة المندوب</h1>
+    <p>قم بإدارة مهام التوصيل الخاصة بك</p>
 </div>
 
 <!-- Statistiques -->
@@ -70,7 +70,7 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="stat-content">
             <h3><?php echo $stats['total_missions'] ?? 0; ?></h3>
-            <p>Missions totales</p>
+            <p>إجمالي المهام</p>
         </div>
     </div>
     <div class="stat-card">
@@ -79,7 +79,7 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="stat-content">
             <h3><?php echo $stats['missions_en_cours'] ?? 0; ?></h3>
-            <p>Missions en cours</p>
+            <p>المهام الجارية</p>
         </div>
     </div>
     <div class="stat-card">
@@ -88,7 +88,7 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="stat-content">
             <h3><?php echo $stats['missions_terminees'] ?? 0; ?></h3>
-            <p>Missions terminées</p>
+            <p>المهام المنجزة</p>
         </div>
     </div>
 </div>
@@ -97,47 +97,47 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
 <div class="quick-actions">
     <a href="missions.php" class="action-card">
         <i class="fas fa-tasks" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-        <h3>Voir les missions</h3>
-        <p>Consulter les missions disponibles</p>
+        <h3>عرض المهام</h3>
+        <p>الإطلاع على المهام المتاحة</p>
     </a>
     <a href="missions.php?filter=en_cours" class="action-card">
         <i class="fas fa-play-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-        <h3>Mes missions en cours</h3>
-        <p>Gérer mes missions actuelles</p>
+        <h3>مهامي الجارية</h3>
+        <p>إدارة مهامي الحالية</p>
     </a>
     <a href="profil.php" class="action-card">
         <i class="fas fa-user-cog" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-        <h3>Mon profil</h3>
-        <p>Modifier mes informations</p>
+        <h3>ملفي الشخصي</h3>
+        <p>تعديل معلوماتي</p>
     </a>
 </div>
 
 <!-- Missions récentes -->
 <div class="card">
     <div class="card-header">
-        <h3><i class="fas fa-history"></i> Vos missions récentes</h3>
-        <a href="missions.php" class="btn btn-outline btn-sm">Voir tout</a>
+        <h3><i class="fas fa-history"></i> مهامك الأخيرة</h3>
+        <a href="missions.php" class="btn btn-outline">عرض الكل</a>
     </div>
     <div class="card-body">
         <?php if(empty($missions_recent)): ?>
             <div style="text-align: center; padding: 3rem;">
                 <i class="fas fa-box-open" style="font-size: 4rem; color: #ccc; margin-bottom: 1rem;"></i>
-                <h3 style="color: #666; margin-bottom: 1rem;">Aucune mission pour le moment</h3>
-                <p style="color: #888;">Consultez les missions disponibles et acceptez-en une</p>
-                <a href="missions.php" class="btn btn-primary" style="margin-top: 1rem;">Voir les missions</a>
+                <h3 style="color: #666; margin-bottom: 1rem;">لا توجد مهام حالياً</h3>
+                <p style="color: #888;">تصفح المهام المتاحة واقبل واحدة</p>
+                <a href="missions.php" class="btn btn-primary" style="margin-top: 1rem;">عرض المهام</a>
             </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Don</th>
-                            <th>Bénéficiaire</th>
-                            <th>Donateur</th>
-                            <th>Lieu</th>
-                            <th>Statut</th>
-                            <th>Date</th>
-                            <th>Actions</th>
+                            <th>التبرع</th>
+                            <th>المستفيد</th>
+                            <th>المتبرع</th>
+                            <th>المكان</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,19 +154,19 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
                                     switch($mission['statut']) {
                                         case 'en_attente':
                                             $status_class = 'badge-warning';
-                                            $status_text = 'En attente';
+                                            $status_text = 'قيد الانتظار';
                                             break;
                                         case 'assignee':
                                             $status_class = 'badge-info';
-                                            $status_text = 'Assignée';
+                                            $status_text = 'معينة';
                                             break;
                                         case 'en_cours':
                                             $status_class = 'badge-primary';
-                                            $status_text = 'En cours';
+                                            $status_text = 'جارية';
                                             break;
                                         case 'livree':
                                             $status_class = 'badge-success';
-                                            $status_text = 'Livrée';
+                                            $status_text = 'تم التوصيل';
                                             break;
                                         default:
                                             $status_class = 'badge-secondary';
@@ -178,7 +178,7 @@ $missions_recent = $missions_stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <td><?php echo date('d/m/Y', strtotime($mission['created_at'])); ?></td>
                                 <td>
                                     <a href="mission-details.php?id=<?php echo $mission['id']; ?>" class="btn btn-outline btn-sm">
-                                        <i class="fas fa-eye"></i>
+                                        <i class="fas fa-eye"></i> عرض
                                     </a>
                                 </td>
                             </tr>
