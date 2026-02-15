@@ -35,6 +35,20 @@ $stats_stmt->bindParam(":user_id", $user_id);
 $stats_stmt->execute();
 $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
 
+// آخر الطلبات
+$recent_demandes_query = "
+    SELECT d.*, don.titre as don_titre, don.categorie
+    FROM demandes d
+    INNER JOIN dons don ON d.don_id = don.id
+    WHERE d.beneficiaire_id = :user_id
+    ORDER BY d.created_at DESC
+    LIMIT 5
+";
+$recent_demandes_stmt = $db->prepare($recent_demandes_query);
+$recent_demandes_stmt->bindParam(":user_id", $user_id);
+$recent_demandes_stmt->execute();
+$recent_demandes = $recent_demandes_stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $page_title = 'لوحة التحكم';
 ?>
 
@@ -247,38 +261,123 @@ $page_title = 'لوحة التحكم';
             padding: 0 15px;
         }
         
-        /* Page Header */
-        .page-header {
+        /* Welcome Section - New Beautiful Blue Design */
+        .welcome-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 40px 0;
+            padding: 40px;
             border-radius: 15px;
             margin-bottom: 30px;
-            text-align: center;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        
-        .page-header::before {
+
+        .welcome-section::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.1);
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
         }
-        
-        .page-header h1 {
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+            animation: rotate 25s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .welcome-text {
+            flex: 1;
+        }
+
+        .welcome-text h1 {
             font-size: 36px;
             margin-bottom: 10px;
-            position: relative;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
-        
-        .page-header p {
+
+        .welcome-text p {
             font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .welcome-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .welcome-stat {
+            text-align: center;
+        }
+
+        .welcome-stat .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .welcome-stat .stat-label {
+            font-size: 14px;
             opacity: 0.9;
-            position: relative;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .welcome-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
         }
         
         /* Cards */
@@ -371,6 +470,11 @@ $page_title = 'لوحة التحكم';
             background: var(--accent);
             color: white;
         }
+
+        .btn-sm {
+            padding: 5px 15px;
+            font-size: 13px;
+        }
         
         /* Stats Cards */
         .stats-grid {
@@ -388,6 +492,12 @@ $page_title = 'لوحة التحكم';
             display: flex;
             align-items: center;
             gap: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
         }
         
         .stat-icon {
@@ -470,6 +580,13 @@ $page_title = 'لوحة التحكم';
             padding: 0 15px;
         }
         
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
         @media (max-width: 768px) {
             .navbar {
                 padding: 0 15px;
@@ -484,7 +601,7 @@ $page_title = 'لوحة التحكم';
                 padding: 15px;
             }
             
-            .page-header h1 {
+            .welcome-text h1 {
                 font-size: 28px;
             }
             
@@ -502,6 +619,10 @@ $page_title = 'لوحة التحكم';
                 flex-direction: column;
                 text-align: center;
                 gap: 20px;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
             }
         }
         
@@ -530,6 +651,155 @@ $page_title = 'لوحة التحكم';
                 background: white;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.1);
                 padding: 20px;
+            }
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge-primary {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Demandes List */
+        .demandes-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .demande-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .demande-item:last-child {
+            border-bottom: none;
+        }
+
+        .demande-info h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+        }
+
+        .demande-info p {
+            margin: 0;
+            color: var(--secondary);
+            font-size: 13px;
+        }
+
+        .demande-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--dark);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+
+        .action-card i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .action-card h4 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .action-card p {
+            margin: 0;
+            color: var(--secondary);
+            font-size: 13px;
+        }
+
+        @media (max-width: 992px) {
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .quick-actions {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -579,34 +849,23 @@ $page_title = 'لوحة التحكم';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h1>
+            <!-- New Beautiful Blue Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-tachometer-alt"></i>                    
+                    </div>
+                    <div class="welcome-text">
+                        <h1>مرحبًا بك <?php echo htmlspecialchars($current_user['nom']); ?> </h1>
+                        <p>تابع طلباتك وتصفح التبرعات المتاحة</p>
+                        
+                    </div>
+                </div>
+            </div>
+           <div class="page-header">
                 <p>مرحبًا بك <?php echo htmlspecialchars($current_user['nom']); ?>، تابع طلباتك وتصفح التبرعات</p>
             </div>
-
-            <!-- Profile Quick View -->
-            <div class="profile-header">
-                <div class="profile-avatar">
-                    <?php echo strtoupper(substr($current_user['nom'], 0, 1)); ?>
-                </div>
-                <div class="profile-info">
-                    <h2><?php echo htmlspecialchars($current_user['nom']); ?></h2>
-                    <p><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($current_user['email']); ?></p>
-                    <?php if($current_user['telephone']): ?>
-                        <p><i class="fas fa-phone"></i> <?php echo htmlspecialchars($current_user['telephone']); ?></p>
-                    <?php endif; ?>
-                    <?php if($current_user['ville']): ?>
-                        <p><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($current_user['ville']); ?></p>
-                    <?php endif; ?>
-                    <p><i class="fas fa-user-tag"></i> <?php echo $current_user['type'] == 'beneficiaire' ? 'مستفيد' : $current_user['type']; ?></p>
-                    <a href="profile.php" class="btn btn-primary" style="margin-top: 15px;">
-                        <i class="fas fa-edit"></i> تعديل الملف الشخصي
-                    </a>
-                </div>
-            </div>
-
-            <!-- Stats -->
+            <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #74b9ff, #0984e3);">
@@ -647,43 +906,109 @@ $page_title = 'لوحة التحكم';
             </div>
 
             <!-- Quick Actions -->
-            <div class="row" style="margin-bottom: 30px;">
-                <div class="col-4">
-                    <a href="catalogue.php" class="card" style="text-decoration: none; color: inherit; text-align: center; padding: 25px;">
-                        <div style="font-size: 40px; color: var(--accent); margin-bottom: 15px;">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <h4>تصفح التبرعات</h4>
-                        <p style="color: var(--secondary); font-size: 14px;">ابحث عن تبرعات جديدة</p>
-                    </a>
-                </div>
-                <div class="col-4">
-                    <a href="mes-demandes.php" class="card" style="text-decoration: none; color: inherit; text-align: center; padding: 25px;">
-                        <div style="font-size: 40px; color: var(--success); margin-bottom: 15px;">
-                            <i class="fas fa-list"></i>
-                        </div>
-                        <h4>طلباتي</h4>
-                        <p style="color: var(--secondary); font-size: 14px;">تابع حالة طلباتك</p>
-                    </a>
-                </div>
-                <div class="col-4">
-                    <a href="messagerie.php" class="card" style="text-decoration: none; color: inherit; text-align: center; padding: 25px;">
-                        <div style="font-size: 40px; color: var(--warning); margin-bottom: 15px;">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <h4>المراسلة</h4>
-                        <p style="color: var(--secondary); font-size: 14px;">تواصل مع المتبرعين</p>
-                    </a>
-                </div>
+            <div class="quick-actions">
+                <a href="catalogue.php" class="action-card">
+                    <i class="fas fa-search"></i>
+                    <h4>تصفح التبرعات</h4>
+                    <p>ابحث عن تبرعات جديدة</p>
+                </a>
+                <a href="mes-demandes.php" class="action-card">
+                    <i class="fas fa-list"></i>
+                    <h4>طلباتي</h4>
+                    <p>تابع حالة طلباتك</p>
+                </a>
+                <a href="messagerie.php" class="action-card">
+                    <i class="fas fa-comments"></i>
+                    <h4>المراسلة</h4>
+                    <p>تواصل مع المتبرعين</p>
+                </a>
             </div>
 
             <!-- Recent Activity -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-history"></i> نشاطك الأخير</h3>
+            <div class="grid-2">
+                <!-- Recent Demandes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> آخر طلباتك</h3>
+                        <a href="mes-demandes.php" class="btn btn-outline btn-sm">عرض الكل</a>
+                    </div>
+                    <div class="card-body">
+                        <?php if(empty($recent_demandes)): ?>
+                            <div style="text-align: center; padding: 40px;">
+                                <i class="fas fa-file-alt" style="font-size: 60px; color: #ccc; margin-bottom: 20px;"></i>
+                                <p style="color: #666;">لم تقم بتقديم أي طلبات بعد</p>
+                                <a href="catalogue.php" class="btn btn-primary" style="margin-top: 15px;">
+                                    <i class="fas fa-search"></i> تصفح التبرعات
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>التبرع</th>
+                                            <th>الفئة</th>
+                                            <th>الحالة</th>
+                                            <th>التاريخ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach($recent_demandes as $demande): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($demande['don_titre']); ?></td>
+                                            <td>
+                                                <span class="badge badge-primary"><?php echo $demande['categorie']; ?></span>
+                                            </td>
+                                            <td>
+                                                <?php if($demande['statut'] == 'acceptee'): ?>
+                                                    <span class="badge badge-success">مقبولة</span>
+                                                <?php elseif($demande['statut'] == 'en_attente'): ?>
+                                                    <span class="badge badge-warning">في الانتظار</span>
+                                                <?php elseif($demande['statut'] == 'refusee'): ?>
+                                                    <span class="badge badge-danger">مرفوضة</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-info">قيد المعالجة</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?php echo date('d/m/Y', strtotime($demande['created_at'])); ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p>هنا ستظهر آخر الطلبات والنشاطات...</p>
+
+                <!-- Profile Info Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user"></i> معلوماتك الشخصية</h3>
+                        <a href="profile.php" class="btn btn-outline btn-sm">
+                            <i class="fas fa-edit"></i> تعديل
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+                            <div class="profile-avatar" style="width: 80px; height: 80px; font-size: 32px;">
+                                <?php echo strtoupper(substr($current_user['nom'], 0, 1)); ?>
+                            </div>
+                            <div>
+                                <h3 style="margin-bottom: 5px;"><?php echo htmlspecialchars($current_user['nom']); ?></h3>
+                                <p style="color: var(--secondary);"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($current_user['email']); ?></p>
+                            </div>
+                        </div>
+                        
+                        <div style="border-top: 1px solid #eee; padding-top: 20px;">
+                            <?php if($current_user['telephone']): ?>
+                                <p style="margin-bottom: 10px;"><i class="fas fa-phone" style="width: 25px; color: var(--accent);"></i> <?php echo htmlspecialchars($current_user['telephone']); ?></p>
+                            <?php endif; ?>
+                            <?php if($current_user['ville']): ?>
+                                <p style="margin-bottom: 10px;"><i class="fas fa-map-marker-alt" style="width: 25px; color: var(--accent);"></i> <?php echo htmlspecialchars($current_user['ville']); ?></p>
+                            <?php endif; ?>
+                            <p><i class="fas fa-user-tag" style="width: 25px; color: var(--accent);"></i> مستفيد</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
