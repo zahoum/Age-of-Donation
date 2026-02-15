@@ -14,6 +14,7 @@ $dons = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $success = '';
 $error = '';
 
+
 // Gérer la suppression
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $don_id = $_GET['id'];
