@@ -404,7 +404,7 @@ if ($is_logged_in) {
             padding: 15px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border-right: 4px solid;
+            border-left: 4px solid;
         }
         
         .alert-success {
@@ -484,11 +484,6 @@ if ($is_logged_in) {
             color: #d32f2f;
         }
         
-        .badge-secondary {
-            background: #e2e3e5;
-            color: #6c757d;
-        }
-        
         /* Grid System */
         .row {
             display: flex;
@@ -517,18 +512,6 @@ if ($is_logged_in) {
             flex: 0 0 25%;
             max-width: 25%;
             padding: 0 15px;
-        }
-        
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-        
-        .grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
         }
         
         /* Stats Cards */
@@ -570,80 +553,6 @@ if ($is_logged_in) {
             margin: 5px 0 0;
             color: var(--secondary);
             font-size: 14px;
-        }
-        
-        .stat-number {
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .stat-label {
-            color: var(--secondary);
-            font-size: 14px;
-        }
-        
-        /* Dashboard Header */
-        .dashboard-header {
-            background: linear-gradient(135deg, var(--accent), #74b9ff);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        
-        .dashboard-header h1 {
-            margin: 0 0 10px 0;
-            font-size: 32px;
-        }
-        
-        .dashboard-header p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 16px;
-        }
-        
-        /* Quick Actions */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .action-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            text-decoration: none;
-            color: var(--dark);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s;
-            text-align: center;
-        }
-        
-        .action-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-            background: linear-gradient(135deg, var(--accent), #74b9ff);
-            color: white;
-        }
-        
-        .action-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 18px;
-        }
-        
-        .action-card p {
-            margin: 0;
-            font-size: 14px;
-            opacity: 0.8;
-        }
-        
-        /* Table Responsive */
-        .table-responsive {
-            overflow-x: auto;
         }
         
         /* Footer */
@@ -688,19 +597,6 @@ if ($is_logged_in) {
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-            
-            .grid-2, .grid-3 {
-                grid-template-columns: 1fr;
-            }
-            
-            .quick-actions {
-                grid-template-columns: 1fr;
-            }
-            
-            .table td, .table th {
-                padding: 10px;
-                font-size: 14px;
-            }
         }
         
         /* Mobile Menu Toggle */
@@ -728,23 +624,7 @@ if ($is_logged_in) {
                 background: white;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.1);
                 padding: 20px;
-                z-index: 999;
             }
-        }
-        
-        /* RTL Specific */
-        .user-dropdown {
-            left: auto;
-            right: 0;
-        }
-        
-        .alert {
-            border-right: 4px solid;
-            border-left: none;
-        }
-        
-        .table th {
-            text-align: right;
         }
     </style>
 </head>
@@ -786,7 +666,7 @@ if ($is_logged_in) {
                 <?php elseif($user_type == 'livreur'): ?>
                     <li class="nav-item"><a href="<?php echo $user_base; ?>dashboard.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>"><i class="fas fa-home"></i> لوحة التحكم</a></li>
                     <li class="nav-item"><a href="<?php echo $user_base; ?>missions.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'missions.php' ? 'active' : ''; ?>"><i class="fas fa-tasks"></i> المهام</a></li>
-                    <li class="nav-item"><a href="<?php echo $user_base; ?>profil.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'profil.php' ? 'active' : ''; ?>"><i class="fas fa-user"></i> ملفي الشخصي</a></li>
+                    <li class="nav-item"><a href="<?php echo $user_base; ?>statistiques.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'statistiques.php' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> الإحصائيات</a></li>
                     
                 <?php endif; ?>
             <?php else: ?>
@@ -794,7 +674,6 @@ if ($is_logged_in) {
                 <li class="nav-item"><a href="<?php echo $base_path; ?>index.php" class="nav-link"><i class="fas fa-home"></i> الرئيسية</a></li>
                 <li class="nav-item"><a href="<?php echo $auth_path; ?>login.php" class="nav-link"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a></li>
                 <li class="nav-item"><a href="<?php echo $auth_path; ?>signup.php" class="nav-link"><i class="fas fa-user-plus"></i> إنشاء حساب</a></li>
-                <li class="nav-item"><a href="<?php echo $base_path; ?>livreur/inscription.php" class="nav-link"><i class="fas fa-truck"></i> devenir livreur</a></li>
             <?php endif; ?>
         </ul>
         
@@ -805,7 +684,7 @@ if ($is_logged_in) {
                 </div>
                 <div class="user-dropdown" id="userDropdown">
                     <?php if(!empty($user_base)): ?>
-                        <a href="<?php echo $user_base; ?>profil.php" class="user-dropdown-item">
+                        <a href="<?php echo $user_base; ?>profile.php" class="user-dropdown-item">
                             <i class="fas fa-user"></i> الملف الشخصي
                         </a>
                         <?php if($user_type == 'beneficiaire'): ?>
@@ -865,7 +744,7 @@ document.addEventListener('click', function(event) {
     const userAvatar = document.querySelector('.user-avatar');
     
     // إغلاق قائمة التنقل
-    if (navLinks && menuToggle && !navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
+    if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
         navLinks.classList.remove('active');
     }
     
