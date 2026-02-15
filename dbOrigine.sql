@@ -149,6 +149,76 @@ CREATE TABLE (
   expDate date 
 )
 -- =============================================
+-- CORRECTION DE LA TABLE `livreurs`
+-- =============================================
+ALTER TABLE `livreurs` 
+ADD COLUMN `nombre_livraisons` INT DEFAULT 0 AFTER `note_moyenne`,
+ADD COLUMN `date_activation` DATETIME NULL AFTER `nombre_livraisons`,
+ADD COLUMN `documents_verifies` BOOLEAN DEFAULT FALSE AFTER `date_activation`;
+
+-- =============================================
+-- TABLE POUR LES DOCUMENTS DES LIVREURS
+-- =============================================
+CREATE TABLE IF NOT EXISTS `livreur_documents` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `document_type` enum('permis','assurance','carte_identite','photo_vehicule') NOT NULL,
+  `document_path` varchar(255) NOT NULL,
+  `statut` enum('en_attente','valide','refuse') DEFAULT 'en_attente',
+  `commentaire_admin` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `livreur_documents_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- TABLE POUR L'HISTORIQUE DES LIVRAISONS
+-- =============================================
+CREATE TABLE IF NOT EXISTS `livraison_historique` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `livraison_id` int(11) NOT NULL,
+  `statut_ancien` varchar(50) DEFAULT NULL,
+  `statut_nouveau` varchar(50) NOT NULL,
+  `commentaire` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `livraison_id` (`livraison_id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `livraison_historique_ibfk_1` FOREIGN KEY (`livraison_id`) REFERENCES `livraisons` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `livraison_historique_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- TABLE POUR LES NOTIFICATIONS
+-- =============================================
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `titre` varchar(255) NOT NULL,
+  `message` text NOT NULL,
+  `lien` varchar(255) DEFAULT NULL,
+  `lu` tinyint(1) DEFAULT 0,
+  `lu_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- MISE À JOUR DE LA TABLE `livraisons`
+-- =============================================
+ALTER TABLE `livraisons`
+ADD COLUMN `code_postal` varchar(10) DEFAULT NULL ,
+ADD COLUMN `instructions` text DEFAULT NULL,
+ADD COLUMN `date_livraison` datetime DEFAULT NULL,
+ADD COLUMN `photo_livraison` varchar(255) DEFAULT NULL ,
+ADD COLUMN `signature` varchar(255) DEFAULT NULL ;
+-- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================
 
