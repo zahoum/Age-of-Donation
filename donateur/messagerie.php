@@ -1,9 +1,9 @@
 <?php
-// donateur/messagerie.php
+// beneficiaire/messagerie.php
 session_start();
 
 // فحص تسجيل الدخول
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'donateur') {
     header('Location: ../auth/login.php');
     exit();
 }
@@ -87,29 +87,31 @@ if ($selected_user_id) {
     $stmt_user->execute();
     $other_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
     
-    // جلب الرسائل
-    $query_messages = "
-        SELECT m.*, u.nom as sender_name 
-        FROM messages m 
-        INNER JOIN users u ON m.expediteur_id = u.id 
-        WHERE (m.expediteur_id = :user_id AND m.destinataire_id = :other_id)
-           OR (m.expediteur_id = :other_id AND m.destinataire_id = :user_id)
-        ORDER BY m.created_at ASC
-    ";
-    
-    $stmt_msg = $db->prepare($query_messages);
-    $stmt_msg->bindParam(':user_id', $user_id);
-    $stmt_msg->bindParam(':other_id', $selected_user_id);
-    $stmt_msg->execute();
-    $messages = $stmt_msg->fetchAll(PDO::FETCH_ASSOC);
-    
-    // تحديث حالة القراءة
-    $query_update = "UPDATE messages SET lu = 1 
-                    WHERE destinataire_id = :user_id AND expediteur_id = :other_id AND lu = 0";
-    $stmt_update = $db->prepare($query_update);
-    $stmt_update->bindParam(':user_id', $user_id);
-    $stmt_update->bindParam(':other_id', $selected_user_id);
-    $stmt_update->execute();
+    if ($other_user) {
+        // جلب الرسائل
+        $query_messages = "
+            SELECT m.*, u.nom as sender_name 
+            FROM messages m 
+            INNER JOIN users u ON m.expediteur_id = u.id 
+            WHERE (m.expediteur_id = :user_id AND m.destinataire_id = :other_id)
+               OR (m.expediteur_id = :other_id AND m.destinataire_id = :user_id)
+            ORDER BY m.created_at ASC
+        ";
+        
+        $stmt_msg = $db->prepare($query_messages);
+        $stmt_msg->bindParam(':user_id', $user_id);
+        $stmt_msg->bindParam(':other_id', $selected_user_id);
+        $stmt_msg->execute();
+        $messages = $stmt_msg->fetchAll(PDO::FETCH_ASSOC);
+        
+        // تحديث حالة القراءة
+        $query_update = "UPDATE messages SET lu = 1 
+                        WHERE destinataire_id = :user_id AND expediteur_id = :other_id AND lu = 0";
+        $stmt_update = $db->prepare($query_update);
+        $stmt_update->bindParam(':user_id', $user_id);
+        $stmt_update->bindParam(':other_id', $selected_user_id);
+        $stmt_update->execute();
+    }
 }
 
 // ========== البحث ==========
@@ -130,6 +132,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
 // الحصول على آخر وقت للتحقق
 $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
 ?>
+
 <!DOCTYPE html>
 <html lang="fr" dir="rtl">
 <head>
@@ -137,9 +140,9 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💬 المراسلة - Age of Donnation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="manifest" href="../manifest.json">
+    <link rel="icon" href="../images/logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="../images/logo-192x192.png">
     <style>
-        /* نفس الـ CSS الأصلي */
         :root {
             --primary: #4361ee;
             --secondary: #3a0ca3;
@@ -269,7 +272,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             color: white;
         }
         
-        /* Notification Dropdown */
         .notification-dropdown {
             position: absolute;
             top: 60px;
@@ -570,7 +572,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             color: var(--primary);
         }
         
-        /* Messages Container */
         .messages-container {
             flex: 1;
             padding: 30px;
@@ -646,7 +647,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             margin-right: 5px;
         }
         
-        /* Input Area */
         .input-area {
             padding: 20px 30px;
             background: white;
@@ -693,13 +693,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
         }
         
-        .send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 80px 20px;
@@ -717,7 +710,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             color: var(--dark);
         }
         
-        /* Search Results */
         .search-results {
             background: white;
             border-radius: 15px;
@@ -748,7 +740,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             border-bottom: none;
         }
         
-        /* Typing Indicator */
         .typing-indicator {
             display: inline-flex;
             align-items: center;
@@ -776,13 +767,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             30% { transform: translateY(-5px); opacity: 1; }
         }
         
-        /* Sound Toggle */
-        .sound-toggle {
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        
-        /* Responsive */
         @media (max-width: 1024px) {
             .messenger-wrapper {
                 flex-direction: column;
@@ -806,7 +790,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             }
         }
         
-        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -913,22 +896,27 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
                     <?php else: ?>
                         <?php foreach($conversations as $conv): ?>
                         <div class="conversation-item <?php echo $selected_user_id == $conv['other_id'] ? 'active' : ''; ?>"
-                             onclick="window.location.href='?user_id=<?php echo $conv['other_id']; ?>'">
+                             onclick="window.location.href='?user_id=<?php echo $conv['other_id']; ?>'"
+                             id="conv-<?php echo $conv['other_id']; ?>">
                             <div class="avatar type-<?php echo $conv['other_type']; ?> online">
                                 <?php echo strtoupper(substr($conv['other_nom'], 0, 1)); ?>
                             </div>
                             <div class="conversation-info">
                                 <h4><?php echo htmlspecialchars($conv['other_nom']); ?></h4>
-                                <p><?php echo $conv['last_message'] ? htmlspecialchars($conv['last_message']) : 'بداية المحادثة...'; ?></p>
+                                <p id="last-msg-<?php echo $conv['other_id']; ?>">
+                                    <?php echo $conv['last_message'] ? htmlspecialchars($conv['last_message']) : 'بداية المحادثة...'; ?>
+                                </p>
                             </div>
                             <div class="conversation-meta">
                                 <?php if($conv['last_time']): ?>
-                                    <span class="conversation-time">
+                                    <span class="conversation-time" id="time-<?php echo $conv['other_id']; ?>">
                                         <?php echo date('H:i', strtotime($conv['last_time'])); ?>
                                     </span>
                                 <?php endif; ?>
                                 <?php if($conv['unread'] > 0): ?>
-                                    <div class="unread-badge"><?php echo $conv['unread']; ?></div>
+                                    <div class="unread-badge" id="unread-<?php echo $conv['other_id']; ?>">
+                                        <?php echo $conv['unread']; ?>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -1043,6 +1031,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     <!-- Audio for notifications -->
     <audio id="notificationSound" preload="auto">
         <source src="../sounds/notification.mp3" type="audio/mpeg">
+        <source src="../sounds/notification.ogg" type="audio/ogg">
     </audio>
     
     <script>
@@ -1055,6 +1044,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Messagerie chargée pour utilisateur: ' + userId);
         scrollToBottom();
         requestNotificationPermission();
         startMessageChecker();
@@ -1065,34 +1055,74 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         if (messageInput) {
             messageInput.focus();
         }
+        
+        // Vérifier l'état du son au chargement
+        console.log('Son activé: ' + soundEnabled);
     });
     
     // Request notification permission
     function requestNotificationPermission() {
         if ('Notification' in window) {
+            console.log('Notification API supportée');
             if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-                Notification.requestPermission();
+                Notification.requestPermission().then(permission => {
+                    console.log('Permission de notification: ' + permission);
+                    if (permission === 'granted') {
+                        // Test notification
+                        // showBrowserNotification('مرحباً', 'الإشعارات مفعلة');
+                    }
+                });
+            } else {
+                console.log('Permission déjà: ' + Notification.permission);
             }
+        } else {
+            console.log('Notification API non supportée');
         }
     }
     
-    // Show browser notification
-    function showBrowserNotification(title, body, icon = '../images/logo.png') {
+    // Show browser notification avec le logo Age of Donnation
+    function showBrowserNotification(title, body) {
         if ('Notification' in window && Notification.permission === 'granted') {
-            const notification = new Notification(title, {
-                body: body,
-                icon: icon,
-                badge: icon,
-                vibrate: [200, 100, 200]
-            });
+            // URL du logo (utilisez le chemin correct vers votre logo)
+            const iconUrl = '../images/logo.png';
+            const badgeUrl = '../images/logo-192x192.png';
             
-            notification.onclick = function() {
-                window.focus();
-                this.close();
+            const options = {
+                body: body,
+                icon: iconUrl,
+                badge: badgeUrl,
+                image: iconUrl,
+                vibrate: [200, 100, 200],
+                silent: !soundEnabled,
+                requireInteraction: true,
+                tag: 'message-notification',
+                renotify: true,
+                data: {
+                    userId: selectedUserId,
+                    url: window.location.href
+                }
             };
             
-            if (soundEnabled) {
-                playNotificationSound();
+            try {
+                const notification = new Notification(title, options);
+                
+                notification.onclick = function(event) {
+                    event.preventDefault();
+                    window.focus();
+                    if (this.data && this.data.userId) {
+                        window.location.href = '?user_id=' + this.data.userId;
+                    }
+                    this.close();
+                };
+                
+                // Jouer le son si activé
+                if (soundEnabled) {
+                    playNotificationSound();
+                }
+                
+                return notification;
+            } catch(e) {
+                console.error('Erreur de notification:', e);
             }
         }
     }
@@ -1101,7 +1131,15 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     function playNotificationSound() {
         const audio = document.getElementById('notificationSound');
         if (audio) {
-            audio.play().catch(e => console.log('Audio play failed:', e));
+            audio.volume = 0.7;
+            audio.play().catch(e => {
+                console.log('Audio play failed:', e);
+                // Essayer de jouer après interaction utilisateur
+                document.addEventListener('click', function playOnClick() {
+                    audio.play().catch(console.error);
+                    document.removeEventListener('click', playOnClick);
+                }, { once: true });
+            });
         }
     }
     
@@ -1110,6 +1148,12 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         soundEnabled = !soundEnabled;
         localStorage.setItem('soundEnabled', soundEnabled);
         updateSoundIcon();
+        console.log('Son ' + (soundEnabled ? 'activé' : 'désactivé'));
+        
+        // Tester le son si activé
+        if (soundEnabled) {
+            playNotificationSound();
+        }
     }
     
     function updateSoundIcon() {
@@ -1118,39 +1162,61 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             soundToggle.innerHTML = soundEnabled ? 
                 '<i class="fas fa-volume-up"></i>' : 
                 '<i class="fas fa-volume-mute"></i>';
+            soundToggle.title = soundEnabled ? 'إيقاف الصوت' : 'تفعيل الصوت';
         }
     }
     
     // Start message checker
     function startMessageChecker() {
-        checkInterval = setInterval(checkNewMessages, 5000);
+        if (checkInterval) {
+            clearInterval(checkInterval);
+        }
+        checkInterval = setInterval(checkNewMessages, 3000); // Check every 3 seconds
+        console.log('Message checker démarré');
     }
     
     // Check for new messages
     function checkNewMessages() {
-        fetch(`../ajax/check_new_messages.php?last_check=${encodeURIComponent(lastCheck)}`)
-            .then(response => response.json())
+        fetch(`../ajax/check_new_messages.php?last_check=${encodeURIComponent(lastCheck)}&t=${Date.now()}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur réseau');
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success && data.new_messages.length > 0) {
-                    handleNewMessages(data.new_messages);
-                    updateNotificationBadge(data.total_unread);
-                    lastCheck = data.current_time;
+                if (data.success) {
+                    if (data.new_messages && data.new_messages.length > 0) {
+                        console.log('Nouveaux messages:', data.new_messages.length);
+                        handleNewMessages(data.new_messages);
+                        updateNotificationBadge(data.total_unread);
+                    }
+                    lastCheck = data.current_time || lastCheck;
                 }
             })
-            .catch(error => console.error('Error checking messages:', error));
+            .catch(error => {
+                console.error('Error checking messages:', error);
+            });
     }
     
     // Handle new messages
     function handleNewMessages(messages) {
         messages.forEach(message => {
+            console.log('Nouveau message de:', message.expediteur_nom);
+            
+            // Afficher notification
             showBrowserNotification(
-                `رسالة جديدة من ${message.expediteur_nom}`,
+                `💬 رسالة جديدة من ${message.expediteur_nom}`,
                 message.message.substring(0, 100) + (message.message.length > 100 ? '...' : '')
             );
             
+            // Mettre à jour la liste des notifications
             addToNotificationList(message);
+            
+            // Mettre à jour la conversation
             updateConversation(message);
             
+            // Si on est dans la conversation avec cet utilisateur, ajouter le message
             if (selectedUserId == message.expediteur_id) {
                 addMessageToChat(message);
             }
@@ -1160,15 +1226,24 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     // Add message to notifications list
     function addToNotificationList(message) {
         const notificationsList = document.getElementById('notificationsList');
-        const emptyState = notificationsList.querySelector('.notification-empty');
+        if (!notificationsList) return;
         
+        const emptyState = notificationsList.querySelector('.notification-empty');
         if (emptyState) {
             emptyState.remove();
         }
         
+        // Vérifier si la notification existe déjà
+        const existing = document.querySelector(`.notification-item[data-message-id="${message.id}"]`);
+        if (existing) return;
+        
         const notificationItem = document.createElement('div');
         notificationItem.className = 'notification-item unread';
-        notificationItem.onclick = () => startChat(message.expediteur_id);
+        notificationItem.setAttribute('data-message-id', message.id);
+        notificationItem.onclick = () => {
+            window.location.href = '?user_id=' + message.expediteur_id;
+        };
+        
         notificationItem.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div class="avatar type-${message.expediteur_type}" style="width: 40px; height: 40px; font-size: 16px;">
@@ -1183,6 +1258,11 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         `;
         
         notificationsList.insertBefore(notificationItem, notificationsList.firstChild);
+        
+        // Limiter le nombre de notifications
+        while (notificationsList.children.length > 10) {
+            notificationsList.removeChild(notificationsList.lastChild);
+        }
     }
     
     // Update conversation in sidebar
@@ -1191,27 +1271,46 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         let conversation = document.getElementById(conversationId);
         
         if (conversation) {
+            // Mettre à jour le dernier message
             const lastMsg = document.getElementById(`last-msg-${message.expediteur_id}`);
-            if (lastMsg) lastMsg.textContent = message.message.substring(0, 50) + '...';
+            if (lastMsg) {
+                lastMsg.textContent = message.message.substring(0, 50) + '...';
+            }
             
+            // Mettre à jour l'heure
             const timeSpan = document.getElementById(`time-${message.expediteur_id}`);
-            if (timeSpan) timeSpan.textContent = 'الآن';
+            if (timeSpan) {
+                timeSpan.textContent = 'الآن';
+            }
             
+            // Mettre à jour le badge non lu
             const unreadBadge = document.getElementById(`unread-${message.expediteur_id}`);
-            const currentUnread = unreadBadge ? parseInt(unreadBadge.textContent) || 0 : 0;
-            const newUnread = currentUnread + 1;
-            
             if (unreadBadge) {
-                unreadBadge.textContent = newUnread;
+                const currentUnread = parseInt(unreadBadge.textContent) || 0;
+                unreadBadge.textContent = currentUnread + 1;
                 unreadBadge.style.display = 'flex';
             } else {
                 const metaDiv = conversation.querySelector('.conversation-meta');
-                metaDiv.innerHTML += `<div class="unread-badge" id="unread-${message.expediteur_id}">1</div>`;
+                if (metaDiv) {
+                    const newBadge = document.createElement('div');
+                    newBadge.className = 'unread-badge';
+                    newBadge.id = `unread-${message.expediteur_id}`;
+                    newBadge.textContent = '1';
+                    metaDiv.appendChild(newBadge);
+                }
             }
             
+            // Animation
             conversation.classList.add('new-message');
             setTimeout(() => conversation.classList.remove('new-message'), 1000);
+            
+            // Déplacer en haut de la liste
+            const container = document.getElementById('conversationsList');
+            if (container && container.firstChild) {
+                container.insertBefore(conversation, container.firstChild);
+            }
         } else {
+            // Si la conversation n'existe pas, recharger la page
             location.reload();
         }
     }
@@ -1219,8 +1318,9 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     // Add message to current chat
     function addMessageToChat(message) {
         const messagesContainer = document.getElementById('messagesContainer');
-        const emptyState = messagesContainer.querySelector('.empty-state');
+        if (!messagesContainer) return;
         
+        const emptyState = messagesContainer.querySelector('.empty-state');
         if (emptyState) {
             emptyState.remove();
         }
@@ -1242,6 +1342,9 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     
     // Update notification badge
     function updateNotificationBadge(totalUnread = null) {
+        const badge = document.getElementById('notificationBadge');
+        const unreadCount = document.getElementById('unreadCount');
+        
         if (totalUnread === null) {
             fetch('../ajax/check_new_messages.php')
                 .then(response => response.json())
@@ -1249,7 +1352,8 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
                     if (data.success) {
                         updateBadgeDisplay(data.total_unread);
                     }
-                });
+                })
+                .catch(console.error);
         } else {
             updateBadgeDisplay(totalUnread);
         }
@@ -1280,31 +1384,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         }
     }
     
-    // Search users
-    let searchTimeout;
-    function searchUsers(query) {
-        clearTimeout(searchTimeout);
-        
-        if (query.length < 2) {
-            document.getElementById('searchResults').style.display = 'none';
-            return;
-        }
-        
-        searchTimeout = setTimeout(() => {
-            fetch(`?action=search&search=${encodeURIComponent(query)}`)
-                .then(response => response.text())
-                .then(html => {
-                    const resultsDiv = document.getElementById('searchResults');
-                    resultsDiv.style.display = 'block';
-                });
-        }, 500);
-    }
-    
-    // Start chat with user
-    function startChat(userId) {
-        window.location.href = '?user_id=' + userId;
-    }
-    
     // Auto resize textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
@@ -1328,11 +1407,11 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         
         if (e.ctrlKey && e.key === 'k') {
             e.preventDefault();
-            document.getElementById('searchInput').focus();
+            document.getElementById('searchInput')?.focus();
         }
         
         if (e.key === 'Escape') {
-            document.getElementById('notificationDropdown').classList.remove('active');
+            document.getElementById('notificationDropdown')?.classList.remove('active');
         }
     });
     
@@ -1343,11 +1422,11 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         const searchResults = document.getElementById('searchResults');
         const searchInput = document.getElementById('searchInput');
         
-        if (!dropdown.contains(event.target) && !bell.contains(event.target)) {
+        if (dropdown && !dropdown.contains(event.target) && !bell?.contains(event.target)) {
             dropdown.classList.remove('active');
         }
         
-        if (!searchResults.contains(event.target) && !searchInput.contains(event.target)) {
+        if (searchResults && !searchResults.contains(event.target) && !searchInput?.contains(event.target)) {
             searchResults.style.display = 'none';
         }
     });
@@ -1357,6 +1436,13 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         if (checkInterval) {
             clearInterval(checkInterval);
         }
+    });
+    
+    // Appliquer autoResize à tous les textareas
+    document.querySelectorAll('.message-input').forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            autoResize(this);
+        });
     });
     </script>
 </body>

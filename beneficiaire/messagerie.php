@@ -141,8 +141,8 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     <title>💬 المراسلة - Age of Donnation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="../images/logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="../images/logo-192x192.png">
     <style>
-        /* نفس الـ CSS السابق مع تغيير الروابط */
         :root {
             --primary: #4361ee;
             --secondary: #3a0ca3;
@@ -272,7 +272,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             color: white;
         }
         
-        /* نفس باقي الـ CSS من النسخة السابقة */
         .notification-dropdown {
             position: absolute;
             top: 60px;
@@ -517,7 +516,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             font-weight: bold;
         }
         
-        /* Chat Area - نفس الـ CSS السابق */
+        /* Chat Area */
         .chat-area {
             flex: 1;
             display: flex;
@@ -896,22 +895,27 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
                     <?php else: ?>
                         <?php foreach($conversations as $conv): ?>
                         <div class="conversation-item <?php echo $selected_user_id == $conv['other_id'] ? 'active' : ''; ?>"
-                             onclick="window.location.href='?user_id=<?php echo $conv['other_id']; ?>'">
+                             onclick="window.location.href='?user_id=<?php echo $conv['other_id']; ?>'"
+                             id="conv-<?php echo $conv['other_id']; ?>">
                             <div class="avatar type-<?php echo $conv['other_type']; ?> online">
                                 <?php echo strtoupper(substr($conv['other_nom'], 0, 1)); ?>
                             </div>
                             <div class="conversation-info">
                                 <h4><?php echo htmlspecialchars($conv['other_nom']); ?></h4>
-                                <p><?php echo $conv['last_message'] ? htmlspecialchars($conv['last_message']) : 'بداية المحادثة...'; ?></p>
+                                <p id="last-msg-<?php echo $conv['other_id']; ?>">
+                                    <?php echo $conv['last_message'] ? htmlspecialchars($conv['last_message']) : 'بداية المحادثة...'; ?>
+                                </p>
                             </div>
                             <div class="conversation-meta">
                                 <?php if($conv['last_time']): ?>
-                                    <span class="conversation-time">
+                                    <span class="conversation-time" id="time-<?php echo $conv['other_id']; ?>">
                                         <?php echo date('H:i', strtotime($conv['last_time'])); ?>
                                     </span>
                                 <?php endif; ?>
                                 <?php if($conv['unread'] > 0): ?>
-                                    <div class="unread-badge"><?php echo $conv['unread']; ?></div>
+                                    <div class="unread-badge" id="unread-<?php echo $conv['other_id']; ?>">
+                                        <?php echo $conv['unread']; ?>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -1036,7 +1040,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     let userId = '<?php echo $user_id; ?>';
     let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
     let checkInterval;
-    let notificationCheckInterval;
     
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
@@ -1063,6 +1066,10 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
                 Notification.requestPermission().then(permission => {
                     console.log('Permission de notification: ' + permission);
+                    if (permission === 'granted') {
+                        // Test notification
+                        // showBrowserNotification('مرحباً', 'الإشعارات مفعلة');
+                    }
                 });
             } else {
                 console.log('Permission déjà: ' + Notification.permission);
@@ -1089,10 +1096,10 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
                 requireInteraction: true,
                 tag: 'message-notification',
                 renotify: true,
-                actions: [
-                    { action: 'open', title: 'فتح المحادثة' },
-                    { action: 'close', title: 'إغلاق' }
-                ]
+                data: {
+                    userId: selectedUserId,
+                    url: window.location.href
+                }
             };
             
             try {
@@ -1101,14 +1108,10 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
                 notification.onclick = function(event) {
                     event.preventDefault();
                     window.focus();
-                    if (notification.data && notification.data.userId) {
-                        window.location.href = '?user_id=' + notification.data.userId;
+                    if (this.data && this.data.userId) {
+                        window.location.href = '?user_id=' + this.data.userId;
                     }
                     this.close();
-                };
-                
-                notification.onclose = function() {
-                    console.log('Notification fermée');
                 };
                 
                 // Jouer le son si activé
@@ -1127,7 +1130,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
     function playNotificationSound() {
         const audio = document.getElementById('notificationSound');
         if (audio) {
-            audio.volume = 0.5;
+            audio.volume = 0.7;
             audio.play().catch(e => {
                 console.log('Audio play failed:', e);
                 // Essayer de jouer après interaction utilisateur
@@ -1167,7 +1170,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         if (checkInterval) {
             clearInterval(checkInterval);
         }
-        checkInterval = setInterval(checkNewMessages, 5000);
+        checkInterval = setInterval(checkNewMessages, 3000); // Check every 3 seconds
         console.log('Message checker démarré');
     }
     
@@ -1268,19 +1271,19 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
         
         if (conversation) {
             // Mettre à jour le dernier message
-            const lastMsg = conversation.querySelector('.conversation-info p');
+            const lastMsg = document.getElementById(`last-msg-${message.expediteur_id}`);
             if (lastMsg) {
                 lastMsg.textContent = message.message.substring(0, 50) + '...';
             }
             
             // Mettre à jour l'heure
-            const timeSpan = conversation.querySelector('.conversation-time');
+            const timeSpan = document.getElementById(`time-${message.expediteur_id}`);
             if (timeSpan) {
                 timeSpan.textContent = 'الآن';
             }
             
             // Mettre à jour le badge non lu
-            const unreadBadge = conversation.querySelector('.unread-badge');
+            const unreadBadge = document.getElementById(`unread-${message.expediteur_id}`);
             if (unreadBadge) {
                 const currentUnread = parseInt(unreadBadge.textContent) || 0;
                 unreadBadge.textContent = currentUnread + 1;
@@ -1290,6 +1293,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
                 if (metaDiv) {
                     const newBadge = document.createElement('div');
                     newBadge.className = 'unread-badge';
+                    newBadge.id = `unread-${message.expediteur_id}`;
                     newBadge.textContent = '1';
                     metaDiv.appendChild(newBadge);
                 }
@@ -1304,6 +1308,9 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             if (container && container.firstChild) {
                 container.insertBefore(conversation, container.firstChild);
             }
+        } else {
+            // Si la conversation n'existe pas, recharger la page
+            location.reload();
         }
     }
     
@@ -1374,21 +1381,6 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
             const unreadItems = dropdown.querySelectorAll('.notification-item.unread');
             unreadItems.forEach(item => item.classList.remove('unread'));
         }
-    }
-    
-    // Search users
-    let searchTimeout;
-    function searchUsers(query) {
-        clearTimeout(searchTimeout);
-        
-        if (query.length < 2) {
-            document.getElementById('searchResults').style.display = 'none';
-            return;
-        }
-        
-        searchTimeout = setTimeout(() => {
-            window.location.href = `?action=search&search=${encodeURIComponent(query)}`;
-        }, 500);
     }
     
     // Auto resize textarea
