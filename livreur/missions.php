@@ -1141,6 +1141,7 @@ $page_title = 'مهام التوصيل';
         }
         
         
+
         if (!userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
             userDropdown.classList.remove('active');
         }
