@@ -1172,3 +1172,5 @@ $page_title = 'الملف الشخصي';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

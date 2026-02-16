@@ -1262,3 +1262,5 @@ $page_title = 'نشر تبرع جديد';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

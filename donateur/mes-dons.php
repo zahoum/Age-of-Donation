@@ -1182,3 +1182,5 @@ $page_title = 'تبرعاتي';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

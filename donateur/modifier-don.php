@@ -1352,3 +1352,5 @@ $page_title = 'تعديل التبرع';
     });
     </script>
 </body>
+<?php
+include '../includes/footer.php'; ?>

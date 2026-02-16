@@ -1026,3 +1026,5 @@ $page_title = 'تأكيد الطلبات';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

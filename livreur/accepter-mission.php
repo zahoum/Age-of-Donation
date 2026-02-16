@@ -53,3 +53,5 @@ try {
 header('Location: missions.php?filter=en_cours');
 exit;
 ?>
+<?php
+include '../includes/footer.php'; ?>

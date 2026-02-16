@@ -108,3 +108,5 @@ require_once '../includes/header.php';
     </div>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

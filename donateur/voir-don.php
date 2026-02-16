@@ -1204,3 +1204,5 @@ $page_title = 'عرض التبرع';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>
