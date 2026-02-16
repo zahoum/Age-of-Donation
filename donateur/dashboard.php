@@ -1060,5 +1060,3 @@ $page_title = 'لوحة التحكم - متبرع';
     </script>
 </body>
 </html>
-<?php
-include '../includes/footer.php'; ?>

@@ -109,7 +109,7 @@ $page_title = 'الرئيسية';
             line-height: 1.6;
         }
         
-        /* Navbar - نفس تصميم dashboard */
+        /* Navbar - مثل تصميم dashboard */
         .navbar {
             background: white;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -284,41 +284,131 @@ $page_title = 'الرئيسية';
             padding: 0 15px;
         }
         
-        /* Page Header */
-        .page-header {
+        /* Welcome Section - مثل تصميم dashboard */
+        .welcome-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 40px 0;
+            padding: 60px 40px;
             border-radius: 15px;
             margin-bottom: 30px;
-            text-align: center;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        
-        .page-header::before {
+
+        .welcome-section::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.1);
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
         }
-        
-        .page-header h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+            animation: rotate 25s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .welcome-content {
             position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 30px;
         }
-        
-        .page-header p {
-            font-size: 18px;
+
+        .welcome-icon {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .welcome-text {
+            flex: 1;
+        }
+
+        .welcome-text h1 {
+            font-size: 48px;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-text p {
+            font-size: 20px;
+            opacity: 0.95;
+            margin-bottom: 25px;
+        }
+
+        .welcome-stats {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+        }
+
+        .welcome-stat {
+            text-align: center;
+        }
+
+        .welcome-stat .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .welcome-stat .stat-label {
+            font-size: 16px;
             opacity: 0.9;
-            position: relative;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .welcome-stats {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+            
+            .welcome-text h1 {
+                font-size: 32px;
+            }
         }
         
-        /* Cards */
+        /* Cards - مثل تصميم dashboard */
         .card {
             background: white;
             border-radius: 12px;
@@ -355,7 +445,7 @@ $page_title = 'الرئيسية';
             padding: 25px;
         }
         
-        /* Buttons */
+        /* Buttons - مثل تصميم dashboard */
         .btn {
             padding: 10px 25px;
             border-radius: 8px;
@@ -408,8 +498,13 @@ $page_title = 'الرئيسية';
             background: var(--accent);
             color: white;
         }
+
+        .btn-sm {
+            padding: 5px 15px;
+            font-size: 13px;
+        }
         
-        /* Stats Cards */
+        /* Stats Cards - مثل تصميم dashboard */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -425,6 +520,12 @@ $page_title = 'الرئيسية';
             display: flex;
             align-items: center;
             gap: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
         }
         
         .stat-icon {
@@ -450,6 +551,49 @@ $page_title = 'الرئيسية';
             font-size: 14px;
         }
         
+        /* Quick Actions - مثل تصميم dashboard */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--dark);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+
+        .action-card i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .action-card h4 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .action-card p {
+            margin: 0;
+            color: var(--secondary);
+            font-size: 13px;
+        }
+
         /* Grid System */
         .row {
             display: flex;
@@ -475,33 +619,67 @@ $page_title = 'الرئيسية';
             padding: 0 15px;
         }
         
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 0 15px;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-            
-            .main-content {
-                margin-top: 80px;
-                padding: 15px;
-            }
-            
-            .page-header h1 {
-                font-size: 28px;
-            }
-            
-            .col-6, .col-4, .col-3 {
-                flex: 0 0 100%;
-                max-width: 100%;
-                margin-bottom: 15px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        /* Badges */
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-primary {
+            background: #cce5ff;
+            color: #004085;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .table tbody tr:hover {
+            background: #f8f9fa;
         }
         
         /* Mobile Menu Toggle */
@@ -514,7 +692,21 @@ $page_title = 'الرئيسية';
             cursor: pointer;
         }
         
+        @media (max-width: 992px) {
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
+            .navbar {
+                padding: 0 15px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
             .menu-toggle {
                 display: block;
             }
@@ -529,6 +721,29 @@ $page_title = 'الرئيسية';
                 background: white;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.1);
                 padding: 20px;
+            }
+            
+            .main-content {
+                margin-top: 80px;
+                padding: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .col-6, .col-4, .col-3 {
+                flex: 0 0 100%;
+                max-width: 100%;
+                margin-bottom: 15px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -613,13 +828,20 @@ $page_title = 'الرئيسية';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1><i class="fas fa-hands-helping"></i> مرحبًا بكم في Age of Donnation</h1>
-                <p>منصة التبرعات الأولى التي تجمع المحسنين مع المحتاجين</p>
+            <!-- Beautiful Blue Welcome Section - مثل dashboard -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-hands-helping"></i>                    
+                    </div>
+                    <div class="welcome-text">
+                        <h1>مرحبًا بكم في Age of Donnation</h1>
+                        <p>منصة التبرعات الأولى التي تجمع المحسنين مع المحتاجين</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- Stats Section -->
+            <!-- Stats Cards - مثل dashboard -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #00b894, #00cec9);">
@@ -659,94 +881,49 @@ $page_title = 'الرئيسية';
                 </div>
             </div>
 
-            <!-- Hero Section -->
-            <div class="row" style="margin-bottom: 40px;">
-                <div class="col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h3 style="color: var(--accent); margin-bottom: 20px;">ما هي Age of Donnation؟</h3>
-                            <p style="line-height: 1.8; margin-bottom: 20px;">
-                                منصة مغربية مخصصة للتبرعات والعمل الخيري. نحن نربط بين الأشخاص الذين يريدون التبرع بأشياء لم يعودوا بحاجة إليها وأولئك الذين يحتاجون إليها.
-                            </p>
-                            <div style="display: flex; gap: 20px; margin-top: 30px;">
-                                <div style="text-align: center; flex: 1;">
-                                    <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #0984e3, #74b9ff); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; margin: 0 auto 15px;">
-                                        <i class="fas fa-gift"></i>
-                                    </div>
-                                    <h4>تبرع</h4>
-                                    <small>أعط ما لا تحتاجه</small>
-                                </div>
-                                <div style="text-align: center; flex: 1;">
-                                    <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #fdcb6e, #e17055); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; margin: 0 auto 15px;">
-                                        <i class="fas fa-hands"></i>
-                                    </div>
-                                    <h4>استفد</h4>
-                                    <small>احصل على ما تحتاجه</small>
-                                </div>
-                                <div style="text-align: center; flex: 1;">
-                                    <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #00b894, #00cec9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; margin: 0 auto 15px;">
-                                        <i class="fas fa-truck"></i>
-                                    </div>
-                                    <h4>ساعد</h4>
-                                    <small>كن ساعي تطوع</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h3 style="color: var(--accent); margin-bottom: 20px;">ابدأ الآن</h3>
-                            <p style="margin-bottom: 25px; color: var(--secondary);">اختر نوع حسابك وانضم إلى مجتمعنا</p>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 15px;">
-                                <a href="auth/signup.php?type=donateur" class="btn btn-primary" style="justify-content: center;">
-                                    <i class="fas fa-gift"></i> أريد التبرع
-                                </a>
-                                <a href="auth/signup.php?type=beneficiaire" class="btn btn-success" style="justify-content: center;">
-                                    <i class="fas fa-hands"></i> أريد الاستفادة
-                                </a>
-                                <a href="livreur/inscription.php" class="btn btn-outline" style="justify-content: center;">
-                                    <i class="fas fa-truck"></i> أريد أن أصبح ساعي
-                                </a>
-                            </div>
-                            
-                            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-                                <h4><i class="fas fa-user-shield"></i> لديك حساب بالفعل؟</h4>
-                                <p style="margin: 10px 0;">سجل دخولك للوصول إلى جميع الميزات</p>
-                                <a href="auth/login.php" class="btn" style="background: var(--dark); color: white; justify-content: center;">
-                                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Quick Actions - مثل dashboard -->
+            <div class="quick-actions">
+                <a href="auth/signup.php?type=donateur" class="action-card">
+                    <i class="fas fa-gift"></i>
+                    <h4>أريد التبرع</h4>
+                    <p>ساهم في نشر الخير</p>
+                </a>
+                <a href="auth/signup.php?type=beneficiaire" class="action-card">
+                    <i class="fas fa-hands"></i>
+                    <h4>أريد الاستفادة</h4>
+                    <p>احصل على ما تحتاجه</p>
+                </a>
+                <a href="livreur/inscription.php" class="action-card">
+                    <i class="fas fa-truck"></i>
+                    <h4>أريد أن أصبح ساعي</h4>
+                    <p>ساعد في التوصيل</p>
+                </a>
+                <a href="auth/login.php" class="action-card">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <h4>تسجيل الدخول</h4>
+                    <p>لديك حساب بالفعل؟</p>
+                </a>
             </div>
 
             <!-- Recent Dons Section -->
             <?php if(!empty($recent_dons)): ?>
             <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-fire"></i> تبرعات جديدة متاحة</h3>
-                    <a href="auth/signup.php?type=beneficiaire" class="btn btn-primary">انضم لطلبها</a>
+                    <h3><i class="fas fa-fire" style="color: var(--accent);"></i> أحدث التبرعات</h3>
+                    <a href="auth/login.php" class="btn btn-primary btn-sm">طلب تبرع</a>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <?php foreach($recent_dons as $don): ?>
                         <div class="col-4">
-                            <div style="border: 1px solid #eee; border-radius: 10px; padding: 20px; height: 100%;">
+                            <div style="border: 1px solid #eee; border-radius: 10px; padding: 20px; height: 100%; background: #f8f9fa;">
                                 <h4 style="margin-bottom: 10px; color: var(--primary);"><?php echo htmlspecialchars($don['titre']); ?></h4>
                                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
                                     <?php echo strlen($don['description']) > 80 ? substr(htmlspecialchars($don['description']), 0, 80) . '...' : htmlspecialchars($don['description']); ?>
                                 </p>
                                 <div style="margin-bottom: 15px;">
-                                    <span class="badge" style="background: #e3f2fd; color: #1976d2; padding: 5px 10px; border-radius: 20px; font-size: 12px;">
-                                        <?php echo $don['categorie']; ?>
-                                    </span>
-                                    <span class="badge" style="background: #e8f5e9; color: #388e3c; padding: 5px 10px; border-radius: 20px; font-size: 12px;">
-                                        <?php echo $don['ville']; ?>
-                                    </span>
+                                    <span class="badge badge-primary"><?php echo $don['categorie']; ?></span>
+                                    <span class="badge badge-success"><?php echo $don['ville']; ?></span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <small style="color: #888;">
@@ -764,47 +941,47 @@ $page_title = 'الرئيسية';
             </div>
             <?php endif; ?>
 
-            <!-- How It Works -->
-            <div class="card" style="margin-top: 40px;">
+            <!-- How It Works Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-question-circle" style="color: var(--accent);"></i> كيف تعمل المنصة؟</h3>
+                </div>
                 <div class="card-body">
-                    <h3 style="color: var(--accent); margin-bottom: 25px;"><i class="fas fa-question-circle"></i> كيف تعمل المنصة؟</h3>
                     <div class="row">
-                        <div class="col-6">
+                        <div class="col-3">
                             <div style="text-align: center; padding: 20px;">
-                                <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: var(--accent); border: 2px dashed #ddd;">
-                                    <i class="fas fa-1"></i>
+                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #0984e3, #74b9ff); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
+                                    1
                                 </div>
                                 <h4>انشر تبرعك</h4>
-                                <p>سجل دخولك كمتبرع وانشر الأشياء التي لم تعد بحاجة إليها</p>
+                                <p style="color: var(--secondary);">سجل كمتبرع وانشر الأشياء التي لم تعد بحاجة إليها</p>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-3">
                             <div style="text-align: center; padding: 20px;">
-                                <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: var(--accent); border: 2px dashed #ddd;">
-                                    <i class="fas fa-2"></i>
+                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #00b894, #00cec9); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
+                                    2
                                 </div>
                                 <h4>اطلب تبرعًا</h4>
-                                <p>ابحث في الكتالوج واطلب ما تحتاجه مع شرح وضعيتك</p>
+                                <p style="color: var(--secondary);">ابحث في الكتالوج واطلب ما تحتاجه</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-6">
+                        <div class="col-3">
                             <div style="text-align: center; padding: 20px;">
-                                <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: var(--accent); border: 2px dashed #ddd;">
-                                    <i class="fas fa-3"></i>
+                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #fdcb6e, #e17055); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
+                                    3
                                 </div>
                                 <h4>التواصل</h4>
-                                <p>تواصل مع الطرف الآخر ورتب عملية الاستلام</p>
+                                <p style="color: var(--secondary);">تواصل مع الطرف الآخر ورتب الاستلام</p>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-3">
                             <div style="text-align: center; padding: 20px;">
-                                <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: var(--accent); border: 2px dashed #ddd;">
-                                    <i class="fas fa-4"></i>
+                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #a29bfe, #6c5ce7); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
+                                    4
                                 </div>
                                 <h4>التسليم</h4>
-                                <p>استلم التبرع وأنعم به لمن يحتاجه</p>
+                                <p style="color: var(--secondary);">استلم التبرع وأنعم به لمن يحتاجه</p>
                             </div>
                         </div>
                     </div>
@@ -814,17 +991,16 @@ $page_title = 'الرئيسية';
     </div>
 
     <script>
-    // User dropdown functions
+    function toggleMenu() {
+        const navLinks = document.getElementById('navLinks');
+        navLinks.classList.toggle('active');
+    }
+    
     function toggleDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('active');
     }
     
-    function toggleMenu() {
-        const navLinks = document.getElementById('navLinks');
-        navLinks.classList.toggle('active');
-    }
-
     // إغلاق القوائم عند النقر خارجها
     document.addEventListener('click', function(event) {
         const navLinks = document.getElementById('navLinks');
