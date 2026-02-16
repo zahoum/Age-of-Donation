@@ -259,6 +259,9 @@ ADD COLUMN IF NOT EXISTS `instructions` text DEFAULT NULL ,
 ADD COLUMN IF NOT EXISTS `date_livraison` datetime DEFAULT NULL ,
 ADD COLUMN IF NOT EXISTS `photo_livraison` varchar(255) DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS `signature` varchar(255) DEFAULT NULL 
+
+
+
 -- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================

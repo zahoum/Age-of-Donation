@@ -49,10 +49,17 @@ if (isset($_GET['accept']) && isset($_GET['mission_id'])) {
         $db->beginTransaction();
         
         // Vérifier que la mission est disponible
-        $check_query = "SELECT l.*, d.ville, d.donateur_id, de.beneficiaire_id 
+        $check_query = "SELECT l.*, d.ville, d.donateur_id, de.beneficiaire_id,
+                               d.titre as don_titre, d.adresse_retrait,
+                               u_beneficiaire.nom as beneficiaire_nom,
+                               u_beneficiaire.telephone as beneficiaire_telephone,
+                               u_donateur.nom as donateur_nom,
+                               u_donateur.telephone as donateur_telephone
                        FROM livraisons l
                        INNER JOIN demandes de ON l.demande_id = de.id
                        INNER JOIN dons d ON de.don_id = d.id
+                       INNER JOIN users u_beneficiaire ON de.beneficiaire_id = u_beneficiaire.id
+                       INNER JOIN users u_donateur ON d.donateur_id = u_donateur.id
                        WHERE l.id = :mission_id 
                        AND l.livreur_id IS NULL 
                        AND l.statut = 'en_attente'
@@ -73,10 +80,49 @@ if (isset($_GET['accept']) && isset($_GET['mission_id'])) {
         $stmt->bindParam(':mission_id', $mission_id);
         $stmt->execute();
         
-        // Créer une notification (optionnel)
-        // ...
+        // Ajouter à l'historique
+        $historique_query = "INSERT INTO livraison_historique 
+                            (livraison_id, statut_ancien, statut_nouveau, commentaire, created_by, created_at) 
+                            VALUES 
+                            (:livraison_id, 'en_attente', 'assignee', 'تم قبول المهمة من قبل المندوب', :created_by, NOW())";
+        $stmt_historique = $db->prepare($historique_query);
+        $stmt_historique->bindParam(':livraison_id', $mission_id);
+        $stmt_historique->bindParam(':created_by', $user_id);
+        $stmt_historique->execute();
+        
+        // Créer une notification pour le bénéficiaire et le donateur
+        // Notification pour le bénéficiaire
+        $notif_benef = "INSERT INTO notifications (user_id, type, titre, message, lien, created_at) 
+                        VALUES (:user_id, 'mission', 'تم قبول مهمة التوصيل', 
+                        'تم قبول مهمة توصيل التبرع: " . $mission['don_titre'] . " من قبل مندوب', 
+                        'livreur/mission-details.php?id=" . $mission_id . "', NOW())";
+        $stmt_notif_benef = $db->prepare($notif_benef);
+        $stmt_notif_benef->bindParam(':user_id', $mission['beneficiaire_id']);
+        $stmt_notif_benef->execute();
+        
+        // Notification pour le donateur
+        $notif_don = "INSERT INTO notifications (user_id, type, titre, message, lien, created_at) 
+                     VALUES (:user_id, 'mission', 'تم قبول مهمة التوصيل', 
+                     'تم قبول مهمة توصيل التبرع: " . $mission['don_titre'] . " من قبل مندوب', 
+                     'donateur/mission-details.php?id=" . $mission_id . "', NOW())";
+        $stmt_notif_don = $db->prepare($notif_don);
+        $stmt_notif_don->bindParam(':user_id', $mission['donateur_id']);
+        $stmt_notif_don->execute();
         
         $db->commit();
+        
+        // تخزين معلومات المهمة في الجلسة لعرضها في صفحة التفاصيل
+        $_SESSION['accepted_mission'] = [
+            'id' => $mission_id,
+            'don_titre' => $mission['don_titre'],
+            'adresse_retrait' => $mission['adresse_retrait'],
+            'ville' => $mission['ville'],
+            'beneficiaire_nom' => $mission['beneficiaire_nom'],
+            'beneficiaire_telephone' => $mission['beneficiaire_telephone'],
+            'donateur_nom' => $mission['donateur_nom'],
+            'donateur_telephone' => $mission['donateur_telephone']
+        ];
+        
         $success = "✅ تم قبول المهمة بنجاح";
         
     } catch(Exception $e) {
@@ -90,6 +136,19 @@ if (isset($_GET['start']) && isset($_GET['mission_id'])) {
     $mission_id = $_GET['start'];
     
     try {
+        $db->beginTransaction();
+        
+        // Vérifier que la mission est assignée à ce livreur
+        $check_query = "SELECT * FROM livraisons WHERE id = :mission_id AND livreur_id = :user_id AND statut = 'assignee'";
+        $check_stmt = $db->prepare($check_query);
+        $check_stmt->bindParam(':mission_id', $mission_id);
+        $check_stmt->bindParam(':user_id', $user_id);
+        $check_stmt->execute();
+        
+        if ($check_stmt->rowCount() == 0) {
+            throw new Exception("لا يمكن بدء هذه المهمة");
+        }
+        
         $query = "UPDATE livraisons 
                   SET statut = 'en_cours' 
                   WHERE id = :mission_id 
@@ -98,14 +157,24 @@ if (isset($_GET['start']) && isset($_GET['mission_id'])) {
         $stmt = $db->prepare($query);
         $stmt->bindParam(':mission_id', $mission_id);
         $stmt->bindParam(':user_id', $user_id);
+        $stmt->execute();
         
-        if ($stmt->execute() && $stmt->rowCount() > 0) {
-            $success = "✅ تم بدء المهمة بنجاح";
-        } else {
-            $error = "❌ لا يمكن بدء هذه المهمة";
-        }
-    } catch(PDOException $e) {
-        $error = "❌ خطأ في قاعدة البيانات: " . $e->getMessage();
+        // Ajouter à l'historique
+        $historique_query = "INSERT INTO livraison_historique 
+                            (livraison_id, statut_ancien, statut_nouveau, commentaire, created_by, created_at) 
+                            VALUES 
+                            (:livraison_id, 'assignee', 'en_cours', 'تم بدء التوصيل', :created_by, NOW())";
+        $stmt_historique = $db->prepare($historique_query);
+        $stmt_historique->bindParam(':livraison_id', $mission_id);
+        $stmt_historique->bindParam(':created_by', $user_id);
+        $stmt_historique->execute();
+        
+        $db->commit();
+        $success = "✅ تم بدء المهمة بنجاح";
+        
+    } catch(Exception $e) {
+        $db->rollBack();
+        $error = "❌ خطأ: " . $e->getMessage();
     }
 }
 
@@ -115,6 +184,17 @@ if (isset($_GET['complete']) && isset($_GET['mission_id'])) {
     
     try {
         $db->beginTransaction();
+        
+        // Vérifier que la mission est en cours par ce livreur
+        $check_query = "SELECT * FROM livraisons WHERE id = :mission_id AND livreur_id = :user_id AND statut = 'en_cours'";
+        $check_stmt = $db->prepare($check_query);
+        $check_stmt->bindParam(':mission_id', $mission_id);
+        $check_stmt->bindParam(':user_id', $user_id);
+        $check_stmt->execute();
+        
+        if ($check_stmt->rowCount() == 0) {
+            throw new Exception("لا يمكن إنهاء هذه المهمة");
+        }
         
         $query = "UPDATE livraisons 
                   SET statut = 'livree', date_livraison = NOW() 
@@ -126,22 +206,28 @@ if (isset($_GET['complete']) && isset($_GET['mission_id'])) {
         $stmt->bindParam(':user_id', $user_id);
         $stmt->execute();
         
-        if ($stmt->rowCount() > 0) {
-            // Mettre à jour le compteur de livraisons du livreur
-            $update_livreur = "UPDATE livreurs SET nombre_livraisons = nombre_livraisons + 1 WHERE user_id = :user_id";
-            $stmt_livreur = $db->prepare($update_livreur);
-            $stmt_livreur->bindParam(':user_id', $user_id);
-            $stmt_livreur->execute();
-            
-            $db->commit();
-            $success = "✅ تم إكمال المهمة بنجاح! شكراً لك";
-        } else {
-            $db->rollBack();
-            $error = "❌ لا يمكن إنهاء هذه المهمة";
-        }
-    } catch(PDOException $e) {
+        // Ajouter à l'historique
+        $historique_query = "INSERT INTO livraison_historique 
+                            (livraison_id, statut_ancien, statut_nouveau, commentaire, created_by, created_at) 
+                            VALUES 
+                            (:livraison_id, 'en_cours', 'livree', 'تم إكمال التوصيل بنجاح', :created_by, NOW())";
+        $stmt_historique = $db->prepare($historique_query);
+        $stmt_historique->bindParam(':livraison_id', $mission_id);
+        $stmt_historique->bindParam(':created_by', $user_id);
+        $stmt_historique->execute();
+        
+        // Mettre à jour le compteur de livraisons du livreur
+        $update_livreur = "UPDATE livreurs SET nombre_livraisons = nombre_livraisons + 1 WHERE user_id = :user_id";
+        $stmt_livreur = $db->prepare($update_livreur);
+        $stmt_livreur->bindParam(':user_id', $user_id);
+        $stmt_livreur->execute();
+        
+        $db->commit();
+        $success = "✅ تم إكمال المهمة بنجاح! شكراً لك";
+        
+    } catch(Exception $e) {
         $db->rollBack();
-        $error = "❌ خطأ في قاعدة البيانات: " . $e->getMessage();
+        $error = "❌ خطأ: " . $e->getMessage();
     }
 }
 
@@ -149,7 +235,7 @@ if (isset($_GET['complete']) && isset($_GET['mission_id'])) {
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'disponibles';
 $selected_ville = isset($_GET['ville']) ? $_GET['ville'] : '';
 
-// Récupérer toutes les villes disponibles (uniquement pour les dons non supprimés)
+// Récupérer toutes les villes disponibles
 $ville_query = "SELECT DISTINCT d.ville 
                 FROM dons d
                 INNER JOIN demandes de ON d.id = de.don_id
@@ -162,27 +248,39 @@ $ville_stmt = $db->prepare($ville_query);
 $ville_stmt->execute();
 $villes = $ville_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Récupérer les missions
+// Récupérer les missions avec toutes les informations nécessaires
 $query = "
-    SELECT l.*, 
-           d.titre as don_titre, 
-           d.ville,
-           d.adresse_retrait,
-           d.categorie,
-           d.etat,
-           u.nom as beneficiaire_nom, 
-           u.telephone as beneficiaire_telephone,
-           u.adresse as beneficiaire_adresse,
-           u2.nom as donateur_nom,
-           u2.telephone as donateur_telephone,
-           de.message_demande,
-           de.beneficiaire_id,
-           d.donateur_id
+    SELECT 
+        l.*,
+        d.titre as don_titre,
+        d.description as don_description,
+        d.categorie,
+        d.etat,
+        d.ville,
+        d.adresse_retrait,
+        d.photo_principale,
+        d.livraison_option,
+        u_beneficiaire.id as beneficiaire_id,
+        u_beneficiaire.nom as beneficiaire_nom,
+        u_beneficiaire.email as beneficiaire_email,
+        u_beneficiaire.telephone as beneficiaire_telephone,
+        u_beneficiaire.adresse as beneficiaire_adresse,
+        u_beneficiaire.ville as beneficiaire_ville,
+        u_donateur.id as donateur_id,
+        u_donateur.nom as donateur_nom,
+        u_donateur.email as donateur_email,
+        u_donateur.telephone as donateur_telephone,
+        u_donateur.adresse as donateur_adresse,
+        u_donateur.ville as donateur_ville,
+        de.id as demande_id,
+        de.message_demande,
+        de.created_at as demande_date,
+        de.statut as demande_statut
     FROM livraisons l
     INNER JOIN demandes de ON l.demande_id = de.id
     INNER JOIN dons d ON de.don_id = d.id
-    INNER JOIN users u ON de.beneficiaire_id = u.id
-    INNER JOIN users u2 ON d.donateur_id = u2.id
+    INNER JOIN users u_beneficiaire ON de.beneficiaire_id = u_beneficiaire.id
+    INNER JOIN users u_donateur ON d.donateur_id = u_donateur.id
     WHERE (d.is_deleted IS NULL OR d.is_deleted = 0)
 ";
 
@@ -207,7 +305,6 @@ if($filter == 'disponibles') {
     $query .= " AND l.livreur_id = :user_id";
     $params[':user_id'] = $user_id;
 } elseif($filter == 'toutes') {
-    // Pas de filtre spécifique
     if(!empty($selected_ville)) {
         $query .= " AND d.ville = :ville";
         $params[':ville'] = $selected_ville;
@@ -249,6 +346,36 @@ $count_stmt = $db->prepare($count_query);
 $count_stmt->bindParam(":user_id", $user_id);
 $count_stmt->execute();
 $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
+
+// Traductions
+$categories = [
+    'vetements' => 'ملابس',
+    'nourriture' => 'طعام',
+    'meubles' => 'أثاث',
+    'livres' => 'كتب',
+    'electromenager' => 'أجهزة كهربائية',
+    'divers' => 'متنوع'
+];
+
+$etats = [
+    'neuf' => 'جديد',
+    'bon_etat' => 'حالة جيدة',
+    'usage' => 'مستعمل'
+];
+
+$statuts_livraison = [
+    'en_attente' => 'في انتظار مندوب',
+    'assignee' => 'تم التعيين',
+    'en_cours' => 'جارية',
+    'livree' => 'تم التوصيل',
+    'annulee' => 'ملغاة'
+];
+
+$livraison_options = [
+    'none' => 'المستفيد يتحمل التوصيل',
+    'fifty' => 'المتبرع يتحمل 50%',
+    'full' => 'المتبرع يتحمل التوصيل كاملاً'
+];
 ?>
 
 <style>
@@ -442,6 +569,153 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
     font-size: 14px;
 }
 
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.btn-sm {
+    padding: 5px 15px;
+    font-size: 13px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0984e3, #74b9ff);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0873c4, #0984e3);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(9, 132, 227, 0.3);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: white;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #00a085, #00b7a8);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 184, 148, 0.3);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #fdcb6e, #f39c12);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #fdb94e, #e67e22);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(253, 203, 110, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #d63031, #ff7675);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c0392b, #e17055);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(214, 48, 49, 0.3);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+}
+
+.btn-outline:hover {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #00cec9, #00b894);
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.alert {
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border-right: 4px solid;
+}
+
+.alert-success {
+    background: #d4edda;
+    border-right-color: #155724;
+    color: #155724;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    border-right-color: #721c24;
+    color: #721c24;
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.badge-primary {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.badge-secondary {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state i {
+    font-size: 60px;
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
 @media (max-width: 768px) {
     .mission-card {
         flex-direction: column;
@@ -497,6 +771,16 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i>
                 <?php echo $success; ?>
+                <?php if(isset($_SESSION['accepted_mission'])): ?>
+                <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">
+                    <strong>مهمة مقبولة:</strong> <?php echo $_SESSION['accepted_mission']['don_titre']; ?>
+                    <br>
+                    <a href="mission-details.php?id=<?php echo $_SESSION['accepted_mission']['id']; ?>" class="btn btn-sm btn-primary" style="margin-top: 10px;">
+                        <i class="fas fa-eye"></i> عرض التفاصيل
+                    </a>
+                </div>
+                <?php unset($_SESSION['accepted_mission']); ?>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
@@ -569,7 +853,7 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                 </a>
             </div>
             
-            <!-- Filtre par ville (visible seulement pour les onglets qui affichent les missions disponibles) -->
+            <!-- Filtre par ville -->
             <?php if(in_array($filter, ['disponibles', 'toutes'])): ?>
             <div class="city-filter">
                 <i class="fas fa-filter" style="color: var(--accent);"></i>
@@ -691,6 +975,12 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                                             <i class="fas fa-money-bill"></i> رسوم: <?php echo $mission['frais_livraison']; ?> درهم
                                         </span>
                                     <?php endif; ?>
+                                    <?php if($mission['livraison_option'] != 'none'): ?>
+                                        <span class="badge badge-info">
+                                            <i class="fas fa-truck"></i> 
+                                            <?php echo $livraison_options[$mission['livraison_option']] ?? ''; ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <h3>
@@ -703,7 +993,7 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                                 <div class="mission-details">
                                     <span><i class="fas fa-user"></i> المستفيد: <?php echo htmlspecialchars($mission['beneficiaire_nom']); ?></span>
                                     <span><i class="fas fa-user"></i> المتبرع: <?php echo htmlspecialchars($mission['donateur_nom']); ?></span>
-                                    <span><i class="fas fa-tag"></i> <?php echo $mission['categorie']; ?></span>
+                                    <span><i class="fas fa-tag"></i> <?php echo $categories[$mission['categorie']] ?? $mission['categorie']; ?></span>
                                     <span><i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($mission['created_at'])); ?></span>
                                 </div>
                                 
@@ -714,11 +1004,19 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                                 </div>
                                 <?php endif; ?>
                                 
-                                <!-- Informations de contact (pour les missions acceptées) -->
+                                <!-- Informations de contact pour les missions acceptées -->
                                 <?php if(in_array($mission['statut'], ['assignee', 'en_cours']) && $mission['livreur_id'] == $user_id): ?>
                                 <div class="contact-info">
-                                    <span><i class="fas fa-phone"></i> المتبرع: <?php echo htmlspecialchars($mission['donateur_telephone'] ?? 'غير متوفر'); ?></span>
-                                    <span><i class="fas fa-phone"></i> المستفيد: <?php echo htmlspecialchars($mission['beneficiaire_telephone'] ?? 'غير متوفر'); ?></span>
+                                    <span><i class="fas fa-phone"></i> المتبرع: 
+                                        <a href="tel:<?php echo $mission['donateur_telephone']; ?>">
+                                            <?php echo htmlspecialchars($mission['donateur_telephone'] ?? 'غير متوفر'); ?>
+                                        </a>
+                                    </span>
+                                    <span><i class="fas fa-phone"></i> المستفيد: 
+                                        <a href="tel:<?php echo $mission['beneficiaire_telephone']; ?>">
+                                            <?php echo htmlspecialchars($mission['beneficiaire_telephone'] ?? 'غير متوفر'); ?>
+                                        </a>
+                                    </span>
                                 </div>
                                 <?php endif; ?>
                                 
@@ -735,7 +1033,7 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                                 <?php if($mission['statut'] == 'en_attente' && !$mission['livreur_id']): ?>
                                     <a href="?accept=1&mission_id=<?php echo $mission['id']; ?>" 
                                        class="btn btn-success" 
-                                       onclick="return confirm('هل تريد قبول هذه المهمة؟')">
+                                       onclick="return confirm('هل تريد قبول هذه المهمة؟\n\nالمنطقة: <?php echo $mission['ville']; ?>\nالعنوان: <?php echo $mission['adresse_retrait']; ?>')">
                                         <i class="fas fa-check"></i> قبول المهمة
                                     </a>
                                 <?php elseif($mission['livreur_id'] == $user_id && $mission['statut'] == 'assignee'): ?>
@@ -750,12 +1048,34 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                                        onclick="return confirm('تأكيد إنجاز المهمة؟')">
                                         <i class="fas fa-check-circle"></i> إنهاء المهمة
                                     </a>
+                                <?php elseif($mission['livreur_id'] == $user_id && $mission['statut'] == 'livree'): ?>
+                                    <span class="btn btn-success" style="opacity: 0.8; cursor: default;">
+                                        <i class="fas fa-check"></i> تم التسليم
+                                    </span>
                                 <?php endif; ?>
                                 
                                 <a href="mission-details.php?id=<?php echo $mission['id']; ?>" 
                                    class="btn btn-outline">
                                     <i class="fas fa-eye"></i> تفاصيل
                                 </a>
+                                
+                                <?php if($mission['livreur_id'] == $user_id && $mission['statut'] == 'livree'): ?>
+                                <a href="note.php?mission_id=<?php echo $mission['id']; ?>" 
+                                   class="btn btn-info">
+                                    <i class="fas fa-star"></i> تقييم
+                                </a>
+                                <?php endif; ?>
+                                
+                                <?php if($mission['livreur_id'] == $user_id && in_array($mission['statut'], ['assignee', 'en_cours'])): ?>
+                                <a href="messagerie.php?user_id=<?php echo $mission['beneficiaire_id']; ?>" 
+                                   class="btn btn-outline" title="مراسلة المستفيد">
+                                    <i class="fas fa-comment"></i>
+                                </a>
+                                <a href="messagerie.php?user_id=<?php echo $mission['donateur_id']; ?>" 
+                                   class="btn btn-outline" title="مراسلة المتبرع">
+                                    <i class="fas fa-user"></i>
+                                </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -822,6 +1142,13 @@ document.addEventListener('click', function(event) {
         userDropdown.classList.remove('active');
     }
 });
+
+// Auto-refresh toutes les 30 secondes pour les missions en cours
+<?php if($filter == 'en_cours'): ?>
+setInterval(function() {
+    location.reload();
+}, 30000);
+<?php endif; ?>
 </script>
 
 <?php include '../includes/footer.php'; ?>
