@@ -5,7 +5,7 @@ checkAuth(['admin']);
 $database = new Database();
 $db = $database->getConnection();
 
-
+        
 // Statistiques détaillées
 $stats_query = "
     SELECT 
