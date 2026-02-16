@@ -304,58 +304,7 @@ require_once '../includes/header.php';
 </div>
 
 <div class="grid-2">
-    <!-- Recent Dons -->
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fas fa-history"></i> آخر تبرعاتك</h3>
-            <a href="mes-dons.php" class="btn btn-outline">عرض الكل</a>
-        </div>
-        <div class="card-body">
-            <?php if(empty($dons_recent)): ?>
-                <div style="text-align: center; padding: 40px;">
-                    <i class="fas fa-gift" style="font-size: 60px; color: #ccc; margin-bottom: 20px;"></i>
-                    <p style="color: #666;">لم تقم بنشر أي تبرعات بعد</p>
-                    <a href="publier-don.php" class="btn btn-primary" style="margin-top: 15px;">
-                        <i class="fas fa-plus"></i> نشر أول تبرع
-                    </a>
-                </div>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>العنوان</th>
-                                <th>الفئة</th>
-                                <th>الحالة</th>
-                                <th>التاريخ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($dons_recent as $don): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($don['titre']); ?></td>
-                                <td>
-                                    <span class="badge badge-primary"><?php echo $don['categorie']; ?></span>
-                                </td>
-                                <td>
-                                    <?php if($don['statut'] == 'disponible'): ?>
-                                        <span class="badge badge-success">متاح</span>
-                                    <?php elseif($don['statut'] == 'reserve'): ?>
-                                        <span class="badge badge-warning">محجوز</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-info">مكتمل</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo date('d/m/Y', strtotime($don['created_at'])); ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
+    
     <!-- Demandes en attente -->
     <div class="card">
         <div class="card-header">

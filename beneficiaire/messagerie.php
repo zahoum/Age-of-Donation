@@ -1,9 +1,9 @@
 <?php
-// messenger-new-design.php
+// beneficiaire/messagerie.php
 session_start();
 
 // فحص تسجيل الدخول
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'beneficiaire') {
     header('Location: ../auth/login.php');
     exit();
 }
@@ -17,24 +17,24 @@ $user_id = $_SESSION['user_id'];
 $user_nom = $_SESSION['user_nom'];
 $user_type = $_SESSION['user_type'];
 
-$selected_user_id = $_GET['user_id'] ?? null;
-$action = $_GET['action'] ?? '';
+$selected_user_id = isset($_GET['user_id']) ? $_GET['user_id'] : null;
+$action = isset($_GET['action']) ? $_GET['action'] : '';
 
 // ========== إرسال رسالة ==========
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message']) && $selected_user_id) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message']) && isset($_POST['destinataire_id'])) {
     $message = trim($_POST['message']);
+    $destinataire_id = $_POST['destinataire_id'];
     
-    if (!empty($message)) {
+    if (!empty($message) && !empty($destinataire_id)) {
         $query = "INSERT INTO messages (expediteur_id, destinataire_id, message, created_at) 
                   VALUES (:expediteur_id, :destinataire_id, :message, NOW())";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':expediteur_id', $user_id);
-        $stmt->bindParam(':destinataire_id', $selected_user_id);
+        $stmt->bindParam(':destinataire_id', $destinataire_id);
         $stmt->bindParam(':message', $message);
         
         if ($stmt->execute()) {
-            // إعادة التوجيه بعد الإرسال
-            header("Location: ?user_id=" . $selected_user_id);
+            header("Location: ?user_id=" . $destinataire_id);
             exit();
         }
     }
@@ -75,44 +75,46 @@ $stmt_conv->bindParam(':user_id', $user_id);
 $stmt_conv->execute();
 $conversations = $stmt_conv->fetchAll(PDO::FETCH_ASSOC);
 
-// get massages
+// ========== جلب الرسائل ==========
 $messages = [];
 $other_user = null;
 
 if ($selected_user_id) {
-        // get the inforamtion of secand user
+    // جلب معلومات المستخدم الآخر
     $query_user = "SELECT id, nom, type FROM users WHERE id = :id";
     $stmt_user = $db->prepare($query_user);
     $stmt_user->bindParam(':id', $selected_user_id);
     $stmt_user->execute();
     $other_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
     
-    // Gat messaged 
-    $query_messages = "
-        SELECT m.*, u.nom as sender_name 
-        FROM messages m 
-        INNER JOIN users u ON m.expediteur_id = u.id 
-        WHERE (m.expediteur_id = :user_id AND m.destinataire_id = :other_id)
-           OR (m.expediteur_id = :other_id AND m.destinataire_id = :user_id)
-        ORDER BY m.created_at ASC
-    ";
-    
-    $stmt_msg = $db->prepare($query_messages);
-    $stmt_msg->bindParam(':user_id', $user_id);
-    $stmt_msg->bindParam(':other_id', $selected_user_id);
-    $stmt_msg->execute();
-    $messages = $stmt_msg->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Reaload Read State
-    $query_update = "UPDATE messages SET lu = 1 
-                    WHERE destinataire_id = :user_id AND expediteur_id = :other_id AND lu = 0";
-    $stmt_update = $db->prepare($query_update);
-    $stmt_update->bindParam(':user_id', $user_id);
-    $stmt_update->bindParam(':other_id', $selected_user_id);
-    $stmt_update->execute();
+    if ($other_user) {
+        // جلب الرسائل
+        $query_messages = "
+            SELECT m.*, u.nom as sender_name 
+            FROM messages m 
+            INNER JOIN users u ON m.expediteur_id = u.id 
+            WHERE (m.expediteur_id = :user_id AND m.destinataire_id = :other_id)
+               OR (m.expediteur_id = :other_id AND m.destinataire_id = :user_id)
+            ORDER BY m.created_at ASC
+        ";
+        
+        $stmt_msg = $db->prepare($query_messages);
+        $stmt_msg->bindParam(':user_id', $user_id);
+        $stmt_msg->bindParam(':other_id', $selected_user_id);
+        $stmt_msg->execute();
+        $messages = $stmt_msg->fetchAll(PDO::FETCH_ASSOC);
+        
+        // تحديث حالة القراءة
+        $query_update = "UPDATE messages SET lu = 1 
+                        WHERE destinataire_id = :user_id AND expediteur_id = :other_id AND lu = 0";
+        $stmt_update = $db->prepare($query_update);
+        $stmt_update->bindParam(':user_id', $user_id);
+        $stmt_update->bindParam(':other_id', $selected_user_id);
+        $stmt_update->execute();
+    }
 }
 
-    //search
+// ========== البحث ==========
 $search_results = [];
 if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
     $search = '%' . $_GET['search'] . '%';
@@ -126,7 +128,11 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
     $stmt_search->execute();
     $search_results = $stmt_search->fetchAll(PDO::FETCH_ASSOC);
 }
+
+// الحصول على آخر وقت للتحقق
+$last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
 ?>
+
 <!DOCTYPE html>
 <html lang="fr" dir="rtl">
 <head>
@@ -134,7 +140,9 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💬 المراسلة - Age of Donnation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="../images/logo.png" type="image/png">
     <style>
+        /* نفس الـ CSS السابق مع تغيير الروابط */
         :root {
             --primary: #4361ee;
             --secondary: #3a0ca3;
@@ -194,6 +202,36 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             display: flex;
             align-items: center;
             gap: 20px;
+            position: relative;
+        }
+        
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--gray);
+            transition: color 0.3s;
+        }
+        
+        .notification-bell:hover {
+            color: var(--primary);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--warning);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid white;
         }
         
         .user-avatar {
@@ -232,6 +270,66 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
         .nav-links a.active {
             background: var(--primary);
             color: white;
+        }
+        
+        /* نفس باقي الـ CSS من النسخة السابقة */
+        .notification-dropdown {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            width: 350px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1100;
+        }
+        
+        .notification-dropdown.active {
+            display: block;
+        }
+        
+        .notification-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--light);
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .notification-header h4 {
+            color: var(--dark);
+            font-size: 16px;
+        }
+        
+        .notification-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--light-gray);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .notification-item:hover {
+            background: var(--light);
+        }
+        
+        .notification-item.unread {
+            background: #e3f2fd;
+        }
+        
+        .notification-item small {
+            color: var(--gray);
+            font-size: 12px;
+        }
+        
+        .notification-empty {
+            padding: 30px;
+            text-align: center;
+            color: var(--gray);
         }
         
         /* Main Container */
@@ -317,6 +415,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             cursor: pointer;
             transition: all 0.3s;
             border: 2px solid transparent;
+            position: relative;
         }
         
         .conversation-item:hover {
@@ -328,6 +427,15 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
         .conversation-item.active {
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             border-color: var(--primary);
+        }
+        
+        .conversation-item.new-message {
+            animation: pulse 1s;
+        }
+        
+        @keyframes pulse {
+            0% { background-color: #fff3cd; }
+            100% { background-color: white; }
         }
         
         .avatar {
@@ -409,7 +517,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             font-weight: bold;
         }
         
-        /* Chat Area */
+        /* Chat Area - نفس الـ CSS السابق */
         .chat-area {
             flex: 1;
             display: flex;
@@ -465,7 +573,6 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             color: var(--primary);
         }
         
-        /* Messages Container */
         .messages-container {
             flex: 1;
             padding: 30px;
@@ -482,6 +589,16 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             position: relative;
             word-wrap: break-word;
             animation: fadeIn 0.3s ease-out;
+        }
+        
+        .message.new-message {
+            animation: newMessage 0.5s;
+        }
+        
+        @keyframes newMessage {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
         }
         
         @keyframes fadeIn {
@@ -531,7 +648,6 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             margin-right: 5px;
         }
         
-        /* Input Area */
         .input-area {
             padding: 20px 30px;
             background: white;
@@ -578,7 +694,6 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
         }
         
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 80px 20px;
@@ -596,7 +711,6 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             color: var(--dark);
         }
         
-        /* Search Results */
         .search-results {
             background: white;
             border-radius: 15px;
@@ -604,6 +718,9 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             max-height: 400px;
             overflow-y: auto;
+            position: absolute;
+            width: calc(100% - 50px);
+            z-index: 100;
         }
         
         .search-result-item {
@@ -624,44 +741,6 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             border-bottom: none;
         }
         
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .messenger-wrapper {
-                flex-direction: column;
-                height: auto;
-                min-height: calc(100vh - 120px);
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: 300px;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-        }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a1a1a1;
-        }
-        
-        /* Typing Animation */
         .typing-indicator {
             display: inline-flex;
             align-items: center;
@@ -688,6 +767,47 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
             0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
             30% { transform: translateY(-5px); opacity: 1; }
         }
+        
+        @media (max-width: 1024px) {
+            .messenger-wrapper {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(100vh - 120px);
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 300px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .notification-dropdown {
+                width: 280px;
+                left: auto;
+                right: 0;
+            }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
     </style>
 </head>
 <body>
@@ -706,6 +826,24 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
         </ul>
         
         <div class="user-menu">
+            <div class="notification-bell" onclick="toggleNotifications()" id="notificationBell">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </div>
+            
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-header">
+                    <h4>الإشعارات</h4>
+                    <small id="unreadCount">0 غير مقروء</small>
+                </div>
+                <div id="notificationsList">
+                    <div class="notification-empty">
+                        <i class="fas fa-bell-slash"></i>
+                        <p>لا توجد إشعارات جديدة</p>
+                    </div>
+                </div>
+            </div>
+            
             <div class="user-avatar">
                 <?php echo strtoupper(substr($user_nom, 0, 1)); ?>
             </div>
@@ -724,9 +862,9 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                 <div class="sidebar-header">
                     <h3><i class="fas fa-inbox"></i> المحادثات</h3>
                     
-                    <form method="GET" class="search-box">
-                        <input type="text" name="search" placeholder="ابحث عن مستخدم..." 
-                               value="<?php echo $_GET['search'] ?? ''; ?>">
+                    <form method="GET" class="search-box" id="searchForm">
+                        <input type="text" name="search" id="searchInput" placeholder="ابحث عن مستخدم..." 
+                               value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
                         <input type="hidden" name="action" value="search">
                         <i class="fas fa-search"></i>
                     </form>
@@ -734,8 +872,8 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                     <?php if(!empty($search_results)): ?>
                     <div class="search-results">
                         <?php foreach($search_results as $user): ?>
-                        <div class="search-result-item" onclick="startChat(<?php echo $user['id']; ?>)">
-                            <div class="avatar type-<?php echo $user['type']; ?>">
+                        <div class="search-result-item" onclick="window.location.href='?user_id=<?php echo $user['id']; ?>'">
+                            <div class="avatar type-<?php echo $user['type']; ?>" style="width: 40px; height: 40px; font-size: 16px;">
                                 <?php echo strtoupper(substr($user['nom'], 0, 1)); ?>
                             </div>
                             <div>
@@ -748,7 +886,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                     <?php endif; ?>
                 </div>
                 
-                <div class="conversations-container">
+                <div class="conversations-container" id="conversationsList">
                     <?php if(empty($conversations)): ?>
                         <div class="empty-state">
                             <i class="fas fa-comments"></i>
@@ -758,7 +896,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                     <?php else: ?>
                         <?php foreach($conversations as $conv): ?>
                         <div class="conversation-item <?php echo $selected_user_id == $conv['other_id'] ? 'active' : ''; ?>"
-                             onclick="startChat(<?php echo $conv['other_id']; ?>)">
+                             onclick="window.location.href='?user_id=<?php echo $conv['other_id']; ?>'">
                             <div class="avatar type-<?php echo $conv['other_type']; ?> online">
                                 <?php echo strtoupper(substr($conv['other_nom'], 0, 1)); ?>
                             </div>
@@ -788,7 +926,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                     <!-- Chat Header -->
                     <div class="chat-header">
                         <div class="chat-user">
-                            <div class="avatar type-<?php echo $other_user['type']; ?>">
+                            <div class="avatar type-<?php echo $other_user['type']; ?> online">
                                 <?php echo strtoupper(substr($other_user['nom'], 0, 1)); ?>
                             </div>
                             <div class="chat-user-info">
@@ -798,14 +936,11 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                         </div>
                         
                         <div class="chat-actions">
-                            <button class="chat-btn" title="معلومات">
-                                <i class="fas fa-info-circle"></i>
+                            <button class="chat-btn" onclick="toggleSound()" id="soundToggle" title="تفعيل/إلغاء الصوت">
+                                <i class="fas fa-volume-up"></i>
                             </button>
                             <button class="chat-btn" onclick="window.location.reload()" title="تحديث">
                                 <i class="fas fa-redo"></i>
-                            </button>
-                            <button class="chat-btn" onclick="clearChat()" title="مسح المحادثة">
-                                <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </div>
@@ -840,8 +975,7 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
                     
                     <!-- Input -->
                     <form method="POST" class="input-area">
-                        <textarea name="message" class="message-input" placeholder="اكتب رسالتك هنا..." 
-                                  rows="1" oninput="autoResize(this)" required></textarea>
+                        <textarea name="message" class="message-input" placeholder="اكتب رسالتك هنا..." required></textarea>
                         <input type="hidden" name="destinataire_id" value="<?php echo $selected_user_id; ?>">
                         <button type="submit" class="send-btn">
                             <i class="fas fa-paper-plane"></i>
@@ -889,25 +1023,381 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
         </div>
     </div>
     
-    <script>
-    // JavaScript Functions
-    function startChat(userId) {
-        window.location.href = '?user_id=' + userId;
-    }
+    <!-- Audio for notifications -->
+    <audio id="notificationSound" preload="auto">
+        <source src="../sounds/notification.mp3" type="audio/mpeg">
+        <source src="../sounds/notification.ogg" type="audio/ogg">
+    </audio>
     
-    function clearChat() {
-        if (confirm('هل تريد حقًا مسح كل الرسائل في هذه المحادثة؟')) {
-            // يمكن إضافة AJAX هنا لحذف الرسائل من قاعدة البيانات
-            window.location.reload();
+    <script>
+    // Global variables
+    let lastCheck = '<?php echo $last_check; ?>';
+    let selectedUserId = '<?php echo $selected_user_id; ?>';
+    let userId = '<?php echo $user_id; ?>';
+    let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+    let checkInterval;
+    let notificationCheckInterval;
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Messagerie chargée pour utilisateur: ' + userId);
+        scrollToBottom();
+        requestNotificationPermission();
+        startMessageChecker();
+        updateNotificationBadge();
+        updateSoundIcon();
+        
+        const messageInput = document.querySelector('.message-input');
+        if (messageInput) {
+            messageInput.focus();
+        }
+        
+        // Vérifier l'état du son au chargement
+        console.log('Son activé: ' + soundEnabled);
+    });
+    
+    // Request notification permission
+    function requestNotificationPermission() {
+        if ('Notification' in window) {
+            console.log('Notification API supportée');
+            if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    console.log('Permission de notification: ' + permission);
+                });
+            } else {
+                console.log('Permission déjà: ' + Notification.permission);
+            }
+        } else {
+            console.log('Notification API non supportée');
         }
     }
     
+    // Show browser notification avec le logo Age of Donnation
+    function showBrowserNotification(title, body) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            // URL du logo (utilisez le chemin correct vers votre logo)
+            const iconUrl = '../images/logo.png';
+            const badgeUrl = '../images/logo-192x192.png';
+            
+            const options = {
+                body: body,
+                icon: iconUrl,
+                badge: badgeUrl,
+                image: iconUrl,
+                vibrate: [200, 100, 200],
+                silent: !soundEnabled,
+                requireInteraction: true,
+                tag: 'message-notification',
+                renotify: true,
+                actions: [
+                    { action: 'open', title: 'فتح المحادثة' },
+                    { action: 'close', title: 'إغلاق' }
+                ]
+            };
+            
+            try {
+                const notification = new Notification(title, options);
+                
+                notification.onclick = function(event) {
+                    event.preventDefault();
+                    window.focus();
+                    if (notification.data && notification.data.userId) {
+                        window.location.href = '?user_id=' + notification.data.userId;
+                    }
+                    this.close();
+                };
+                
+                notification.onclose = function() {
+                    console.log('Notification fermée');
+                };
+                
+                // Jouer le son si activé
+                if (soundEnabled) {
+                    playNotificationSound();
+                }
+                
+                return notification;
+            } catch(e) {
+                console.error('Erreur de notification:', e);
+            }
+        }
+    }
+    
+    // Play notification sound
+    function playNotificationSound() {
+        const audio = document.getElementById('notificationSound');
+        if (audio) {
+            audio.volume = 0.5;
+            audio.play().catch(e => {
+                console.log('Audio play failed:', e);
+                // Essayer de jouer après interaction utilisateur
+                document.addEventListener('click', function playOnClick() {
+                    audio.play().catch(console.error);
+                    document.removeEventListener('click', playOnClick);
+                }, { once: true });
+            });
+        }
+    }
+    
+    // Toggle sound
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem('soundEnabled', soundEnabled);
+        updateSoundIcon();
+        console.log('Son ' + (soundEnabled ? 'activé' : 'désactivé'));
+        
+        // Tester le son si activé
+        if (soundEnabled) {
+            playNotificationSound();
+        }
+    }
+    
+    function updateSoundIcon() {
+        const soundToggle = document.getElementById('soundToggle');
+        if (soundToggle) {
+            soundToggle.innerHTML = soundEnabled ? 
+                '<i class="fas fa-volume-up"></i>' : 
+                '<i class="fas fa-volume-mute"></i>';
+            soundToggle.title = soundEnabled ? 'إيقاف الصوت' : 'تفعيل الصوت';
+        }
+    }
+    
+    // Start message checker
+    function startMessageChecker() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+        }
+        checkInterval = setInterval(checkNewMessages, 5000);
+        console.log('Message checker démarré');
+    }
+    
+    // Check for new messages
+    function checkNewMessages() {
+        fetch(`../ajax/check_new_messages.php?last_check=${encodeURIComponent(lastCheck)}&t=${Date.now()}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur réseau');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    if (data.new_messages && data.new_messages.length > 0) {
+                        console.log('Nouveaux messages:', data.new_messages.length);
+                        handleNewMessages(data.new_messages);
+                        updateNotificationBadge(data.total_unread);
+                    }
+                    lastCheck = data.current_time || lastCheck;
+                }
+            })
+            .catch(error => {
+                console.error('Error checking messages:', error);
+            });
+    }
+    
+    // Handle new messages
+    function handleNewMessages(messages) {
+        messages.forEach(message => {
+            console.log('Nouveau message de:', message.expediteur_nom);
+            
+            // Afficher notification
+            showBrowserNotification(
+                `💬 رسالة جديدة من ${message.expediteur_nom}`,
+                message.message.substring(0, 100) + (message.message.length > 100 ? '...' : '')
+            );
+            
+            // Mettre à jour la liste des notifications
+            addToNotificationList(message);
+            
+            // Mettre à jour la conversation
+            updateConversation(message);
+            
+            // Si on est dans la conversation avec cet utilisateur, ajouter le message
+            if (selectedUserId == message.expediteur_id) {
+                addMessageToChat(message);
+            }
+        });
+    }
+    
+    // Add message to notifications list
+    function addToNotificationList(message) {
+        const notificationsList = document.getElementById('notificationsList');
+        if (!notificationsList) return;
+        
+        const emptyState = notificationsList.querySelector('.notification-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Vérifier si la notification existe déjà
+        const existing = document.querySelector(`.notification-item[data-message-id="${message.id}"]`);
+        if (existing) return;
+        
+        const notificationItem = document.createElement('div');
+        notificationItem.className = 'notification-item unread';
+        notificationItem.setAttribute('data-message-id', message.id);
+        notificationItem.onclick = () => {
+            window.location.href = '?user_id=' + message.expediteur_id;
+        };
+        
+        notificationItem.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="avatar type-${message.expediteur_type}" style="width: 40px; height: 40px; font-size: 16px;">
+                    ${message.expediteur_nom.charAt(0)}
+                </div>
+                <div style="flex: 1;">
+                    <strong>${message.expediteur_nom}</strong>
+                    <p style="font-size: 13px; margin: 5px 0 0;">${message.message.substring(0, 50)}...</p>
+                    <small>الآن</small>
+                </div>
+            </div>
+        `;
+        
+        notificationsList.insertBefore(notificationItem, notificationsList.firstChild);
+        
+        // Limiter le nombre de notifications
+        while (notificationsList.children.length > 10) {
+            notificationsList.removeChild(notificationsList.lastChild);
+        }
+    }
+    
+    // Update conversation in sidebar
+    function updateConversation(message) {
+        const conversationId = `conv-${message.expediteur_id}`;
+        let conversation = document.getElementById(conversationId);
+        
+        if (conversation) {
+            // Mettre à jour le dernier message
+            const lastMsg = conversation.querySelector('.conversation-info p');
+            if (lastMsg) {
+                lastMsg.textContent = message.message.substring(0, 50) + '...';
+            }
+            
+            // Mettre à jour l'heure
+            const timeSpan = conversation.querySelector('.conversation-time');
+            if (timeSpan) {
+                timeSpan.textContent = 'الآن';
+            }
+            
+            // Mettre à jour le badge non lu
+            const unreadBadge = conversation.querySelector('.unread-badge');
+            if (unreadBadge) {
+                const currentUnread = parseInt(unreadBadge.textContent) || 0;
+                unreadBadge.textContent = currentUnread + 1;
+                unreadBadge.style.display = 'flex';
+            } else {
+                const metaDiv = conversation.querySelector('.conversation-meta');
+                if (metaDiv) {
+                    const newBadge = document.createElement('div');
+                    newBadge.className = 'unread-badge';
+                    newBadge.textContent = '1';
+                    metaDiv.appendChild(newBadge);
+                }
+            }
+            
+            // Animation
+            conversation.classList.add('new-message');
+            setTimeout(() => conversation.classList.remove('new-message'), 1000);
+            
+            // Déplacer en haut de la liste
+            const container = document.getElementById('conversationsList');
+            if (container && container.firstChild) {
+                container.insertBefore(conversation, container.firstChild);
+            }
+        }
+    }
+    
+    // Add message to current chat
+    function addMessageToChat(message) {
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (!messagesContainer) return;
+        
+        const emptyState = messagesContainer.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message message-received new-message';
+        messageDiv.dataset.messageId = message.id;
+        messageDiv.innerHTML = `
+            <div class="message-sender">${message.expediteur_nom}</div>
+            <div class="message-text">${message.message}</div>
+            <div class="message-time">
+                <span>الآن</span>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+    
+    // Update notification badge
+    function updateNotificationBadge(totalUnread = null) {
+        const badge = document.getElementById('notificationBadge');
+        const unreadCount = document.getElementById('unreadCount');
+        
+        if (totalUnread === null) {
+            fetch('../ajax/check_new_messages.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateBadgeDisplay(data.total_unread);
+                    }
+                })
+                .catch(console.error);
+        } else {
+            updateBadgeDisplay(totalUnread);
+        }
+    }
+    
+    function updateBadgeDisplay(count) {
+        const badge = document.getElementById('notificationBadge');
+        const unreadCount = document.getElementById('unreadCount');
+        
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+            if (unreadCount) unreadCount.textContent = count + ' غير مقروء';
+        } else {
+            badge.style.display = 'none';
+            if (unreadCount) unreadCount.textContent = '0 غير مقروء';
+        }
+    }
+    
+    // Toggle notifications dropdown
+    function toggleNotifications() {
+        const dropdown = document.getElementById('notificationDropdown');
+        dropdown.classList.toggle('active');
+        
+        if (dropdown.classList.contains('active')) {
+            const unreadItems = dropdown.querySelectorAll('.notification-item.unread');
+            unreadItems.forEach(item => item.classList.remove('unread'));
+        }
+    }
+    
+    // Search users
+    let searchTimeout;
+    function searchUsers(query) {
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            document.getElementById('searchResults').style.display = 'none';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            window.location.href = `?action=search&search=${encodeURIComponent(query)}`;
+        }, 500);
+    }
+    
+    // Auto resize textarea
     function autoResize(textarea) {
         textarea.style.height = 'auto';
         textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
     }
     
-    // Auto-scroll to bottom
+    // Scroll to bottom
     function scrollToBottom() {
         const container = document.getElementById('messagesContainer');
         if (container) {
@@ -918,42 +1408,48 @@ if ($action === 'search' && isset($_GET['search']) && !empty($_GET['search'])) {
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && e.key === 'Enter') {
-            const form = document.querySelector('.input-area form');
+            const form = document.querySelector('.input-area');
             if (form) form.submit();
         }
         
-        // Focus search on Ctrl+K
         if (e.ctrlKey && e.key === 'k') {
             e.preventDefault();
-            document.querySelector('.search-box input').focus();
+            document.getElementById('searchInput')?.focus();
+        }
+        
+        if (e.key === 'Escape') {
+            document.getElementById('notificationDropdown')?.classList.remove('active');
         }
     });
     
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        scrollToBottom();
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+        const dropdown = document.getElementById('notificationDropdown');
+        const bell = document.getElementById('notificationBell');
+        const searchResults = document.getElementById('searchResults');
+        const searchInput = document.getElementById('searchInput');
         
-        // Auto-refresh every 30 seconds if in chat
-        // i'm aissa zahoum and i will tronsforme the chat section in the donation to real time chat in version 1.2
-        <?php if($selected_user_id): ?>
-        setInterval(function() {
-            // fetch('?user_id=<?php echo $selected_user_id; ?>&refresh=true')
-        }, 30000);
-        <?php endif; ?>
-        
-        // Auto-focus message input
-        const messageInput = document.querySelector('.message-input');
-        if (messageInput) {
-            messageInput.focus();
-            
-            // Prevent form submit on Enter (use Ctrl+Enter instead)
-            messageInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.ctrlKey) {
-                    e.preventDefault();
-                    this.form.submit();
-                }
-            });
+        if (dropdown && !dropdown.contains(event.target) && !bell?.contains(event.target)) {
+            dropdown.classList.remove('active');
         }
+        
+        if (searchResults && !searchResults.contains(event.target) && !searchInput?.contains(event.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+    
+    // Clean up interval on page unload
+    window.addEventListener('beforeunload', function() {
+        if (checkInterval) {
+            clearInterval(checkInterval);
+        }
+    });
+    
+    // Appliquer autoResize à tous les textareas
+    document.querySelectorAll('.message-input').forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            autoResize(this);
+        });
     });
     </script>
 </body>

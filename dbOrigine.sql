@@ -236,7 +236,29 @@ ADD COLUMN `is_deleted` TINYINT(1) DEFAULT 0 AFTER `statut`,
 ADD COLUMN `deleted_at` TIMESTAMP NULL DEFAULT NULL AFTER `is_deleted`;
 
 
+-- Table pour l'historique des livraisons
+CREATE TABLE IF NOT EXISTS `livraison_historique` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `livraison_id` int(11) NOT NULL,
+    `statut_ancien` varchar(50) DEFAULT NULL,
+    `statut_nouveau` varchar(50) NOT NULL,
+    `commentaire` text DEFAULT NULL,
+    `created_by` int(11) DEFAULT NULL,
+    `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+    PRIMARY KEY (`id`),
+    KEY `livraison_id` (`livraison_id`),
+    KEY `created_by` (`created_by`),
+    CONSTRAINT `livraison_historique_ibfk_1` FOREIGN KEY (`livraison_id`) REFERENCES `livraisons` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `livraison_historique_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Ajouter des colonnes si elles n'existent pas
+ALTER TABLE livraisons
+ADD COLUMN IF NOT EXISTS `code_postal` varchar(10) DEFAULT NULL ,
+ADD COLUMN IF NOT EXISTS `instructions` text DEFAULT NULL ,
+ADD COLUMN IF NOT EXISTS `date_livraison` datetime DEFAULT NULL ,
+ADD COLUMN IF NOT EXISTS `photo_livraison` varchar(255) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS `signature` varchar(255) DEFAULT NULL 
 -- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================
