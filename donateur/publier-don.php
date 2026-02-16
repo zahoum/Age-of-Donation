@@ -20,6 +20,32 @@ $stmt_user->bindParam(":user_id", $user_id);
 $stmt_user->execute();
 $current_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
+// قائمة المدن المغربية
+$moroccan_cities = [
+    'أكادير', 'آسفي', 'أزيلال', 'آسا الزاك', 'بني ملال', 'بنسليمان', 'بوجدور', 'بولمان', 
+    'بني ملال', 'تارودانت', 'تازة', 'تانطان', 'تاونات', 'تطوان', 'تيزنيت', 'الرشيدية', 
+    'الفقيه بن صالح', 'القنيطرة', 'الدار البيضاء', 'الرباط', 'سلا', 'تمارة', 'المحمدية', 
+    'الجديدة', 'الصويرة', 'آسفي', 'اليوسفية', 'العرائش', 'العيون', 'بوجدور', 'الداخلة', 
+    'إفران', 'الحاجب', 'الخميسات', 'خريبكة', 'خنيفرة', 'جرادة', 'جرسيف', 'فحص أنجرة', 
+    'فاس', 'فكيك', 'كلميم', 'العرائش', 'القنيطرة', 'الخميسات', 'الخميسات', 'الرشيدية', 
+    'السمارة', 'سيدي بنور', 'سيدي إفني', 'سيدي سليمان', 'سيدي قاسم', 'شفشاون', 'شيشاوة', 
+    'صفرو', 'طاطا', 'طنجة', 'تارودانت', 'تازة', 'تطوان', 'تيزنيت', 'وزان', 'ورزازات', 
+    'وجدة', 'اليوسفية', 'زاكورة'
+];
+
+// ترتيب المدن أبجدياً
+sort($moroccan_cities, SORT_STRING);
+
+// جلب المدن الفريدة من المستخدمين (المتبرعين والمستفيدين)
+$query_cities = "SELECT DISTINCT ville FROM users WHERE ville IS NOT NULL AND ville != '' ORDER BY ville";
+$stmt_cities = $db->prepare($query_cities);
+$stmt_cities->execute();
+$user_cities = $stmt_cities->fetchAll(PDO::FETCH_COLUMN);
+
+// دمج المدن وإزالة التكرارات
+$all_cities = array_unique(array_merge($moroccan_cities, $user_cities));
+sort($all_cities, SORT_STRING);
+
 $success = '';
 $error = '';
 
@@ -30,6 +56,7 @@ if ($_POST) {
     $etat = $_POST['etat'];
     $adresse_retrait = trim($_POST['adresse_retrait']);
     $ville = trim($_POST['ville']);
+    $livraison_option = $_POST['livraison_option'] ?? 'none';
     
     // التحقق من الحقول الإلزامية
     if (empty($titre) || empty($description) || empty($categorie) || empty($etat) || empty($adresse_retrait) || empty($ville)) {
@@ -58,12 +85,14 @@ if ($_POST) {
             } else {
                 $error = "صيغة الصورة غير مدعومة. استخدم JPG، JPEG، PNG أو GIF";
             }
+        } else {
+            $error = "الصورة الرئيسية مطلوبة";
         }
         
         if (!$error) {
             try {
-                $query = "INSERT INTO dons (donateur_id, titre, description, photo_principale, categorie, etat, adresse_retrait, ville, statut, created_at) 
-                          VALUES (:donateur_id, :titre, :description, :photo_principale, :categorie, :etat, :adresse_retrait, :ville, 'disponible', NOW())";
+                $query = "INSERT INTO dons (donateur_id, titre, description, photo_principale, categorie, etat, adresse_retrait, ville, livraison_option, statut, created_at) 
+                          VALUES (:donateur_id, :titre, :description, :photo_principale, :categorie, :etat, :adresse_retrait, :ville, :livraison_option, 'disponible', NOW())";
                 
                 $stmt = $db->prepare($query);
                 $stmt->bindParam(":donateur_id", $_SESSION['user_id']);
@@ -74,6 +103,7 @@ if ($_POST) {
                 $stmt->bindParam(":etat", $etat);
                 $stmt->bindParam(":adresse_retrait", $adresse_retrait);
                 $stmt->bindParam(":ville", $ville);
+                $stmt->bindParam(":livraison_option", $livraison_option);
                 
                 if ($stmt->execute()) {
                     $don_id = $db->lastInsertId();
@@ -364,6 +394,12 @@ $page_title = 'نشر تبرع جديد';
             color: white;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .welcome-text h1 {
@@ -437,11 +473,6 @@ $page_title = 'نشر تبرع جديد';
             box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4);
         }
         
-        .btn-success {
-            background: linear-gradient(135deg, #00b894, #00cec9);
-            color: white;
-        }
-        
         .btn-outline {
             background: transparent;
             border: 2px solid var(--accent);
@@ -488,6 +519,69 @@ $page_title = 'نشر تبرع جديد';
         textarea.form-control {
             resize: vertical;
             min-height: 100px;
+        }
+        
+        /* City Search Dropdown */
+        .city-search-container {
+            position: relative;
+        }
+        
+        .city-search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        .city-search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.1);
+        }
+        
+        .city-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 2px solid #e1e1e1;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .city-dropdown.active {
+            display: block;
+        }
+        
+        .city-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f1f2f6;
+        }
+        
+        .city-item:hover {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .city-item:last-child {
+            border-bottom: none;
+        }
+        
+        .city-item.highlighted {
+            background: #e3f2fd;
+            color: var(--accent);
+            font-weight: 500;
         }
         
         /* Row and Col */
@@ -610,7 +704,79 @@ $page_title = 'نشر تبرع جديد';
             align-items: center;
             justify-content: center;
         }
-        
+        /* =========================
+   Compact Modern Delivery Options
+========================= */
+
+.delivery-options {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+/* Hide radio */
+.delivery-option input[type="radio"] {
+    display: none;
+}
+
+/* Button Style */
+.delivery-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 30px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+/* Icon */
+.delivery-card i {
+    font-size: 14px;
+}
+
+/* Percentage */
+.delivery-card .percentage {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* Hide big description */
+.delivery-card .description {
+    display: none;
+}
+
+/* Hover */
+.delivery-card:hover {
+    border-color: var(--accent);
+    background: #f9fafb;
+}
+
+/* Selected */
+.delivery-option input[type="radio"]:checked + .delivery-card {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+/* Icon color when selected */
+.delivery-option input[type="radio"]:checked + .delivery-card i {
+    color: #fff;
+}
+
+/* Optional color hint before selection */
+.delivery-card.none { border-color: #fecaca; }
+.delivery-card.fifty { border-color: #fde68a; }
+.delivery-card.full { border-color: #bbf7d0; }
+
         /* Info Card */
         .info-card {
             background: #f8f9fa;
@@ -669,6 +835,10 @@ $page_title = 'نشر تبرع جديد';
             .main-content {
                 margin-top: 80px;
                 padding: 15px;
+            }
+            
+            .delivery-options {
+                flex-direction: column;
             }
         }
     </style>
@@ -801,6 +971,42 @@ $page_title = 'نشر تبرع جديد';
                                     </div>
                                 </div>
 
+                                <!-- Delivery Payment Options -->
+                                <div class="form-group">
+                                    <label class="form-label">خيارات دفع التوصيل *</label>
+                                    <div class="delivery-options">
+                                        <div class="delivery-option">
+                                            <input type="radio" name="livraison_option" id="livraison_none" value="none" <?php echo ($_POST['livraison_option'] ?? 'none') == 'none' ? 'checked' : ''; ?> required>
+                                            <label for="livraison_none" class="delivery-card none">
+                                                <i class="fas fa-times-circle"></i>
+                                                <div class="percentage">0%</div>
+                                                <div class="description">المستفيد يتحمل كامل تكلفة التوصيل</div>
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="delivery-option">
+                                            <input type="radio" name="livraison_option" id="livraison_fifty" value="fifty" <?php echo ($_POST['livraison_option'] ?? '') == 'fifty' ? 'checked' : ''; ?>>
+                                            <label for="livraison_fifty" class="delivery-card fifty">
+                                                <i class="fas fa-adjust"></i>
+                                                <div class="percentage">50%</div>
+                                                <div class="description">تتحمل 50% من تكلفة التوصيل</div>
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="delivery-option">
+                                            <input type="radio" name="livraison_option" id="livraison_full" value="full" <?php echo ($_POST['livraison_option'] ?? '') == 'full' ? 'checked' : ''; ?>>
+                                            <label for="livraison_full" class="delivery-card full">
+                                                <i class="fas fa-check-circle"></i>
+                                                <div class="percentage">100%</div>
+                                                <div class="description">تتحمل كامل تكلفة التوصيل</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <small style="color: #666; display: block; margin-top: 10px;">
+                                        <i class="fas fa-info-circle"></i> اختر نسبة التوصيل التي تريد تحملها. إذا اخترت 0%، سيتحمل المستفيد التكلفة كاملة.
+                                    </small>
+                                </div>
+
                                 <!-- Photos -->
                                 <div class="row">
                                     <div class="col-6">
@@ -811,7 +1017,7 @@ $page_title = 'نشر تبرع جديد';
                                                 <p>انقر لاختيار صورة</p>
                                                 <small>(JPG, JPEG, PNG, GIF)</small>
                                                 <input type="file" id="photo_principale" name="photo_principale" 
-                                                       accept="image/*" style="display:none" onchange="previewPhoto(this, 'preview-principal')">
+                                                       accept="image/*" style="display:none" onchange="previewPhoto(this, 'preview-principal')" required>
                                             </div>
                                             <div id="preview-principal" class="preview-container"></div>
                                         </div>
@@ -836,9 +1042,25 @@ $page_title = 'نشر تبرع جديد';
                                     <div class="col-6">
                                         <div class="form-group">
                                             <label class="form-label">المدينة *</label>
-                                            <input type="text" name="ville" class="form-control" 
-                                                   value="<?php echo htmlspecialchars($_POST['ville'] ?? ''); ?>" 
-                                                   placeholder="مثال: الدار البيضاء، الرباط..." required>
+                                            <div class="city-search-container">
+                                                <input type="text" 
+                                                       id="citySearchInput" 
+                                                       class="city-search-input" 
+                                                       placeholder="ابحث عن مدينتك..." 
+                                                       value="<?php echo htmlspecialchars($_POST['ville'] ?? ''); ?>"
+                                                       oninput="filterCities(this.value)"
+                                                       onclick="showCityDropdown()"
+                                                       autocomplete="off">
+                                                <input type="hidden" name="ville" id="selectedCity" value="<?php echo htmlspecialchars($_POST['ville'] ?? ''); ?>" required>
+                                                <div id="cityDropdown" class="city-dropdown">
+                                                    <?php foreach($all_cities as $city): ?>
+                                                        <div class="city-item" onclick="selectCity('<?php echo htmlspecialchars($city); ?>')">
+                                                            <?php echo htmlspecialchars($city); ?>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                            <small style="color: #666;">ابحث عن مدينتك أو اختر من القائمة</small>
                                         </div>
                                     </div>
 
@@ -871,7 +1093,7 @@ $page_title = 'نشر تبرع جديد';
                                     <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> تأكد من أن التبرع في حالة جيدة ومناسبة للاستخدام</li>
                                     <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> كن دقيقًا في الوصف لتجنب سوء الفهم</li>
                                     <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> الصور الجيدة تزيد من فرص قبول التبرع</li>
-                                    <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> كن متاحًا للرد على استفسارات المستفيدين</li>
+                                    <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> اختر خيار التوصيل المناسب لك وللمستفيد</li>
                                     <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> يمكنك تحديث أو حذف التبرع في أي وقت من صفحة "تبرعاتي"</li>
                                 </ul>
                             </div>
@@ -906,7 +1128,41 @@ $page_title = 'نشر تبرع جديد';
         if (!userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
             userDropdown.classList.remove('active');
         }
+        
+        // Close city dropdown when clicking outside
+        const citySearchContainer = document.querySelector('.city-search-container');
+        if (citySearchContainer && !citySearchContainer.contains(event.target)) {
+            document.getElementById('cityDropdown').classList.remove('active');
+        }
     });
+
+    // City search functions
+    function showCityDropdown() {
+        document.getElementById('cityDropdown').classList.add('active');
+    }
+    
+    function filterCities(searchText) {
+        const dropdown = document.getElementById('cityDropdown');
+        const items = dropdown.getElementsByClassName('city-item');
+        const searchLower = searchText.toLowerCase();
+        
+        dropdown.classList.add('active');
+        
+        for (let item of items) {
+            const cityText = item.textContent.toLowerCase();
+            if (cityText.includes(searchLower)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        }
+    }
+    
+    function selectCity(city) {
+        document.getElementById('citySearchInput').value = city;
+        document.getElementById('selectedCity').value = city;
+        document.getElementById('cityDropdown').classList.remove('active');
+    }
 
     // Photo preview functions
     function previewPhoto(input, previewId) {
@@ -984,9 +1240,23 @@ $page_title = 'نشر تبرع جديد';
             }
         });
         
+        // Check if city is selected
+        const cityInput = document.getElementById('selectedCity');
+        if (!cityInput.value.trim()) {
+            isValid = false;
+            document.getElementById('citySearchInput').style.borderColor = '#ff7675';
+        }
+        
+        // Check if main photo is selected
+        const photoInput = document.getElementById('photo_principale');
+        if (photoInput.files.length === 0) {
+            isValid = false;
+            document.querySelector('.upload-area').style.borderColor = '#ff7675';
+        }
+        
         if (!isValid) {
             e.preventDefault();
-            alert('يرجى ملء جميع الحقول الإلزامية');
+            alert('يرجى ملء جميع الحقول الإلزامية واختيار صورة');
         }
     });
     </script>

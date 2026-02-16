@@ -218,6 +218,11 @@ ADD COLUMN `instructions` text DEFAULT NULL,
 ADD COLUMN `date_livraison` datetime DEFAULT NULL,
 ADD COLUMN `photo_livraison` varchar(255) DEFAULT NULL ,
 ADD COLUMN `signature` varchar(255) DEFAULT NULL ;
+
+-- =============================================
+-- new modification in laivraison option 
+ALTER TABLE dons ADD COLUMN livraison_option ENUM('none', 'fifty', 'full') DEFAULT 'none' AFTER ville;
+-- =============================================
 -- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================

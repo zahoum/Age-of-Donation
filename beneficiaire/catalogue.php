@@ -1,7 +1,7 @@
 <?php
 // beneficiaire/catalogue.php
 session_start();
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'beneficiaire') {
     header('Location: ../auth/login.php');
     exit();
 }
@@ -12,78 +12,117 @@ $database = new Database();
 $db = $database->getConnection();
 
 $user_id = $_SESSION['user_id'];
-$user_nom = $_SESSION['user_nom'];
 
-// جلب معلومات المستخدم الحالي للقائمة
+// جلب معلومات المستخدم الحالي
 $query_user = "SELECT * FROM users WHERE id = :user_id";
 $stmt_user = $db->prepare($query_user);
 $stmt_user->bindParam(":user_id", $user_id);
 $stmt_user->execute();
 $current_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
-// Récupérer tous les dons disponibles
-$query = "
-    SELECT d.*, u.nom as donateur_nom, u.telephone as donateur_telephone
-    FROM dons d 
-    INNER JOIN users u ON d.donateur_id = u.id 
-    WHERE d.statut = 'disponible' 
-    ORDER BY d.created_at DESC
-";
-$stmt = $db->prepare($query);
-$stmt->execute();
-$dons = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
 $success = '';
 $error = '';
 
-// Traitement de la demande
-if ($_POST && isset($_POST['don_id'])) {
-    $don_id = $_POST['don_id'];
-    $message_demande = trim($_POST['message_demande']);
+// ========== معالجة طلب التبرع ==========
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'request_donation') {
+    $don_id = $_POST['don_id'] ?? 0;
+    $message = trim($_POST['message'] ?? '');
     
-    // Vérifier si une demande existe déjà
-    $check_query = "SELECT id FROM demandes WHERE beneficiaire_id = :beneficiaire_id AND don_id = :don_id";
-    $check_stmt = $db->prepare($check_query);
-    $check_stmt->bindParam(":beneficiaire_id", $_SESSION['user_id']);
-    $check_stmt->bindParam(":don_id", $don_id);
-    $check_stmt->execute();
-    
-    if ($check_stmt->rowCount() > 0) {
-        $error = "لقد قدمت طلبًا لهذا التبرع بالفعل";
+    if (empty($message)) {
+        $error = "❌ الرجاء كتابة رسالة توضح سبب طلبك لهذا التبرع";
     } else {
         try {
-            $query = "INSERT INTO demandes (beneficiaire_id, don_id, message_demande, statut, created_at) 
-                    VALUES (:beneficiaire_id, :don_id, :message_demande, 'en_attente', NOW())";
+            // التحقق من أن التبرع لا يزال متاحاً
+            $check_query = "SELECT donateur_id, titre FROM dons WHERE id = :don_id AND statut = 'disponible'";
+            $check_stmt = $db->prepare($check_query);
+            $check_stmt->bindParam(':don_id', $don_id);
+            $check_stmt->execute();
+            $don = $check_stmt->fetch(PDO::FETCH_ASSOC);
             
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(":beneficiaire_id", $_SESSION['user_id']);
-            $stmt->bindParam(":don_id", $don_id);
-            $stmt->bindParam(":message_demande", $message_demande);
-            
-            if ($stmt->execute()) {
-                $success = "تم إرسال طلبك بنجاح! سيتصل بك المتبرع قريبًا.";
+            if (!$don) {
+                $error = "❌ هذا التبرع غير متاح حالياً";
             } else {
-                $error = "حدث خطأ أثناء إرسال الطلب";
+                // التحقق من أن المستفيد لم يقدم طلباً على هذا التبرع من قبل
+                $check_demande = "SELECT id FROM demandes WHERE don_id = :don_id AND beneficiaire_id = :beneficiaire_id";
+                $check_demande_stmt = $db->prepare($check_demande);
+                $check_demande_stmt->bindParam(':don_id', $don_id);
+                $check_demande_stmt->bindParam(':beneficiaire_id', $user_id);
+                $check_demande_stmt->execute();
+                
+                if ($check_demande_stmt->rowCount() > 0) {
+                    $error = "❌ لقد قدمت طلباً على هذا التبرع مسبقاً";
+                } else {
+                    // إدراج الطلب
+                    $query = "INSERT INTO demandes (don_id, beneficiaire_id, message_demande, statut, created_at) 
+                              VALUES (:don_id, :beneficiaire_id, :message, 'en_attente', NOW())";
+                    $stmt = $db->prepare($query);
+                    $stmt->bindParam(':don_id', $don_id);
+                    $stmt->bindParam(':beneficiaire_id', $user_id);
+                    $stmt->bindParam(':message', $message);
+                    
+                    if ($stmt->execute()) {
+                        $demande_id = $db->lastInsertId();
+                        
+                        // إنشاء رسالة في نظام المراسلة للمتابعة
+                        $message_content = "مرحباً، لقد تقدمت بطلب للحصول على تبرعك: " . $don['titre'] . "\n\n";
+                        $message_content .= "رسالتي: " . $message . "\n\n";
+                        $message_content .= "أرجو الرد في أقرب وقت ممكن. شكراً لك!";
+                        
+                        $msg_query = "INSERT INTO messages (expediteur_id, destinataire_id, message, lu, created_at) 
+                                      VALUES (:expediteur_id, :destinataire_id, :message, 0, NOW())";
+                        $msg_stmt = $db->prepare($msg_query);
+                        $msg_stmt->bindParam(':expediteur_id', $user_id);
+                        $msg_stmt->bindParam(':destinataire_id', $don['donateur_id']);
+                        $msg_stmt->bindParam(':message', $message_content);
+                        $msg_stmt->execute();
+                        
+                        $success = "✅ تم إرسال طلبك بنجاح! سيتم إشعارك عند الرد على طلبك.";
+                    } else {
+                        $error = "❌ حدث خطأ أثناء إرسال الطلب";
+                    }
+                }
             }
         } catch(PDOException $e) {
-            $error = "خطأ: " . $e->getMessage();
+            $error = "❌ خطأ في قاعدة البيانات: " . $e->getMessage();
         }
     }
 }
 
-// إحصائيات للـ Welcome Section
-$stats_query = "
-    SELECT 
-        COUNT(*) as total_demandes,
-        SUM(CASE WHEN statut = 'acceptee' THEN 1 ELSE 0 END) as demandes_acceptees,
-        SUM(CASE WHEN statut = 'en_attente' THEN 1 ELSE 0 END) as demandes_attente
-    FROM demandes 
-    WHERE beneficiaire_id = :user_id
+// ========== جلب جميع التبرعات المتاحة ==========
+$query_dons = "
+    SELECT d.*, 
+           u.nom as donateur_nom,
+           u.ville as donateur_ville,
+           (SELECT COUNT(*) FROM demandes WHERE don_id = d.id) as nb_demandes
+    FROM dons d
+    INNER JOIN users u ON d.donateur_id = u.id
+    WHERE d.statut = 'disponible'
+    ORDER BY d.created_at DESC
 ";
-$stats_stmt = $db->prepare($stats_query);
-$stats_stmt->bindParam(":user_id", $user_id);
-$stats_stmt->execute();
-$stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+
+$dons = $db->query($query_dons)->fetchAll(PDO::FETCH_ASSOC);
+
+// تجهيز الفئات والحالات للعرض
+$categories = [
+    'vetements' => 'ملابس',
+    'nourriture' => 'طعام',
+    'meubles' => 'أثاث',
+    'livres' => 'كتب',
+    'electromenager' => 'أجهزة كهربائية',
+    'divers' => 'متنوع'
+];
+
+$etats = [
+    'neuf' => 'جديد',
+    'bon_etat' => 'حالة جيدة',
+    'usage' => 'مستعمل'
+];
+
+$livraison_options = [
+    'none' => 'المستفيد يتحمل التوصيل',
+    'fifty' => 'المتبرع يتحمل 50%',
+    'full' => 'المتبرع يتحمل التوصيل كاملاً'
+];
 
 $page_title = 'كتالوج التبرعات';
 ?>
@@ -264,11 +303,25 @@ $page_title = 'كتالوج التبرعات';
             background: #ffebee;
         }
         
-        /* Welcome Section - Beautiful Blue Design */
+        /* Main Content */
+        .main-content {
+            margin-top: 90px;
+            padding: 20px;
+            min-height: calc(100vh - 160px);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Welcome Section */
         .welcome-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 40px;
+            padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
             position: relative;
@@ -308,18 +361,18 @@ $page_title = 'كتالوج التبرعات';
             z-index: 1;
             display: flex;
             align-items: center;
-            gap: 30px;
+            gap: 20px;
         }
 
         .welcome-icon {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 40px;
+            font-size: 30px;
             color: white;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.3);
@@ -331,70 +384,16 @@ $page_title = 'كتالوج التبرعات';
             50% { transform: scale(1.05); }
         }
 
-        .welcome-text {
-            flex: 1;
-        }
-
         .welcome-text h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
+            font-size: 28px;
+            margin-bottom: 5px;
             font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
 
         .welcome-text p {
-            font-size: 18px;
+            font-size: 16px;
             opacity: 0.95;
-            margin-bottom: 20px;
-        }
-
-        .welcome-stats {
-            display: flex;
-            gap: 30px;
-            margin-top: 20px;
-        }
-
-        .welcome-stat {
-            text-align: center;
-        }
-
-        .welcome-stat .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .welcome-stat .stat-label {
-            font-size: 14px;
-            opacity: 0.9;
-            display: block;
-        }
-
-        @media (max-width: 768px) {
-            .welcome-content {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .welcome-stats {
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-        }
-        
-        /* Main Content */
-        .main-content {
-            margin-top: 90px;
-            padding: 20px;
-            min-height: calc(100vh - 160px);
-        }
-        
-        /* Container */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 15px;
+            margin: 0;
         }
         
         /* Cards */
@@ -434,52 +433,243 @@ $page_title = 'كتالوج التبرعات';
             padding: 25px;
         }
         
-        /* Buttons */
-        .btn {
-            padding: 10px 25px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
+        /* Donation Grid */
+        .donations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .donation-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
             transition: all 0.3s;
-            display: inline-flex;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .donation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .donation-image {
+            height: 200px;
+            background: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .donation-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
             align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            font-size: 15px;
+            justify-content: center;
+            font-size: 60px;
+            background: linear-gradient(135deg, #f5f7fa, #e4e8f0);
+            color: #aaa;
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), #74b9ff);
+        .donation-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--accent);
             color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
         }
         
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #0984e3, #0984e3);
-            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4);
+        .donation-content {
+            padding: 20px;
+            flex: 1;
         }
         
-        .btn-success {
-            background: linear-gradient(135deg, #00b894, #00cec9);
-            color: white;
+        .donation-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
         }
         
-        .btn-success:hover {
-            background: linear-gradient(135deg, #00a085, #00b7a8);
+        .donation-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
         }
         
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--accent);
+        .meta-item {
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .meta-item i {
             color: var(--accent);
         }
         
-        .btn-outline:hover {
-            background: var(--accent);
-            color: white;
+        .donation-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         
-        /* Forms */
+        .donation-footer {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .donor-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .donor-avatar {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .donor-details {
+            font-size: 13px;
+        }
+        
+        .donor-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .donor-city {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .btn-request {
+            background: linear-gradient(135deg, var(--accent), #74b9ff);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .btn-request:hover {
+            background: linear-gradient(135deg, #0984e3, #0984e3);
+            transform: scale(1.05);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            padding: 20px 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .modal-close:hover {
+            transform: scale(1.2);
+        }
+        
+        .modal-body {
+            padding: 25px;
+        }
+        
+        /* Form */
         .form-group {
             margin-bottom: 20px;
         }
@@ -487,134 +677,70 @@ $page_title = 'كتالوج التبرعات';
         .form-label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 500;
             color: var(--primary);
+            font-weight: 500;
         }
         
         .form-control {
             width: 100%;
             padding: 12px 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #e1e1e1;
             border-radius: 8px;
             font-size: 15px;
-            transition: border 0.3s;
+            transition: all 0.3s;
+            font-family: 'Tajawal', sans-serif;
         }
         
         .form-control:focus {
-            border-color: var(--accent);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.2);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.1);
         }
         
-        /* Alerts */
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        /* Alert */
         .alert {
             padding: 15px 20px;
-            border-radius: 8px;
+            border-radius: 10px;
             margin-bottom: 20px;
-            border-left: 4px solid;
+            border-right: 4px solid;
         }
         
         .alert-success {
             background: #d4edda;
-            border-color: #28a745;
+            border-right-color: #155724;
             color: #155724;
         }
         
         .alert-danger {
             background: #f8d7da;
-            border-color: #dc3545;
+            border-right-color: #721c24;
             color: #721c24;
         }
         
-        /* Badges */
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
         }
         
-        .badge-primary {
-            background: #e3f2fd;
-            color: #1976d2;
+        .empty-state i {
+            font-size: 80px;
+            color: #ccc;
+            margin-bottom: 20px;
         }
         
-        .badge-success {
-            background: #e8f5e9;
-            color: #388e3c;
+        .empty-state h3 {
+            color: #666;
+            margin-bottom: 10px;
         }
         
-        .badge-warning {
-            background: #fff3e0;
-            color: #f57c00;
-        }
-        
-        /* Grid System */
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            margin: 0 -15px;
-        }
-        
-        .col-4 {
-            flex: 0 0 33.333%;
-            max-width: 33.333%;
-            padding: 0 15px;
-        }
-        
-        .col-6 {
-            flex: 0 0 50%;
-            max-width: 50%;
-            padding: 0 15px;
-        }
-        
-        .col-3 {
-            flex: 0 0 25%;
-            max-width: 25%;
-            padding: 0 15px;
-        }
-        
-        /* Dons Grid */
-        .don-card {
-            height: 100%;
-            transition: all 0.3s;
-        }
-        
-        .don-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        @media (max-width: 992px) {
-            .col-4 {
-                flex: 0 0 50%;
-                max-width: 50%;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 0 15px;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-            
-            .main-content {
-                margin-top: 80px;
-                padding: 15px;
-            }
-            
-            .welcome-text h1 {
-                font-size: 28px;
-            }
-            
-            .col-4, .col-6, .col-3 {
-                flex: 0 0 100%;
-                max-width: 100%;
-                margin-bottom: 15px;
-            }
+        .empty-state p {
+            color: #999;
         }
         
         /* Mobile Menu Toggle */
@@ -632,6 +758,10 @@ $page_title = 'كتالوج التبرعات';
                 display: block;
             }
             
+            .nav-links {
+                display: none;
+            }
+            
             .nav-links.active {
                 display: flex;
                 flex-direction: column;
@@ -643,42 +773,15 @@ $page_title = 'كتالوج التبرعات';
                 box-shadow: 0 5px 15px rgba(0,0,0,0.1);
                 padding: 20px;
             }
-        }
-        
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .modal-body {
-            padding: 20px;
+            
+            .main-content {
+                margin-top: 80px;
+                padding: 15px;
+            }
+            
+            .donations-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -727,114 +830,51 @@ $page_title = 'كتالوج التبرعات';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Beautiful Blue Welcome Section -->
+            <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-content">
                     <div class="welcome-icon">
-                        <i class="fas fa-box-open"></i>
+                        <i class="fas fa-box-open"></i>                    
                     </div>
                     <div class="welcome-text">
-                        <h1>مرحبًا بك في كتالوج التبرعات </h1>
-                        <p>اكتشف جميع التبرعات المتاحة وتقدم بطلبك الآن</p>
+                        <h1>كتالوج التبرعات</h1>
+                        <p>تصفح التبرعات المتاحة واختر ما يناسبك</p>
                     </div>
                 </div>
             </div>
 
             <?php if($success): ?>
-                <div class="alert alert-success"><?php echo $success; ?></div>
-            <?php endif; ?>
-
-            <?php if($error): ?>
-                <div class="alert alert-danger"><?php echo $error; ?></div>
-            <?php endif; ?>
-
-            <!-- Filters -->
-            <div class="card" style="margin-bottom: 25px;">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-4">
-                            <div class="form-group">
-                                <input type="text" id="searchInput" class="form-control" placeholder="🔍 بحث عن تبرع...">
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="form-group">
-                                <select id="categorieFilter" class="form-control">
-                                    <option value="">جميع الفئات</option>
-                                    <option value="vetements">ملابس</option>
-                                    <option value="nourriture">طعام</option>
-                                    <option value="meubles">أثاث</option>
-                                    <option value="livres">كتب</option>
-                                    <option value="electromenager">أجهزة كهربائية</option>
-                                    <option value="divers">متنوع</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="form-group">
-                                <select id="villeFilter" class="form-control">
-                                    <option value="">جميع المدن</option>
-                                    <?php
-                                    $villes_query = "SELECT DISTINCT ville FROM dons WHERE ville IS NOT NULL AND ville != '' ORDER BY ville";
-                                    $villes_stmt = $db->prepare($villes_query);
-                                    $villes_stmt->execute();
-                                    $villes = $villes_stmt->fetchAll(PDO::FETCH_COLUMN);
-                                    foreach($villes as $ville): 
-                                    ?>
-                                        <option value="<?php echo htmlspecialchars($ville); ?>"><?php echo htmlspecialchars($ville); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <?php echo $success; ?>
                 </div>
-            </div>
+            <?php endif; ?>
+            
+            <?php if($error): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?php echo $error; ?>
+                </div>
+            <?php endif; ?>
 
-            <!-- Dons Grid -->
+            <!-- Donations Grid -->
             <?php if(empty($dons)): ?>
-                <div class="card">
-                    <div class="card-body" style="text-align: center; padding: 50px;">
-                        <div style="font-size: 60px; color: #ddd; margin-bottom: 20px;">
-                            <i class="fas fa-box-open"></i>
-                        </div>
-                        <h3 style="color: #666; margin-bottom: 15px;">لا توجد تبرعات متاحة</h3>
-                        <p style="color: #888;">ارجع لاحقًا لاكتشاف تبرعات جديدة</p>
-                    </div>
+                <div class="empty-state">
+                    <i class="fas fa-gift"></i>
+                    <h3>لا توجد تبرعات متاحة حالياً</h3>
+                    <p>ترقب قريباً، قد يتم نشر تبرعات جديدة</p>
                 </div>
             <?php else: ?>
-                <div class="row" id="donsContainer">
+                <div class="donations-grid">
                     <?php foreach($dons as $don): ?>
-                    <div class="col-4">
-                        <div class="card don-card" 
-                            data-categorie="<?php echo $don['categorie']; ?>" 
-                            data-ville="<?php echo htmlspecialchars($don['ville']); ?>"
-                            data-titre="<?php echo htmlspecialchars(strtolower($don['titre'])); ?>">
-                            <div class="card-body">
-                                <!-- Don Image -->
-                                <div style="width: 100%; height: 180px; margin-bottom: 15px; overflow: hidden; border-radius: 8px;">
-                                    <?php if(!empty($don['photo_principale'])): 
-                                        $image_path = '../' . $don['photo_principale'];
-                                        if(file_exists($image_path)): ?>
-                                            <img src="<?php echo $image_path; ?>" 
-                                                alt="<?php echo htmlspecialchars($don['titre']); ?>"
-                                                style="width: 100%; height: 100%; object-fit: cover;">
-                                        <?php else: ?>
-                                            <div style="width: 100%; height: 100%; background: #f8f9fa; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 40px;">
-                                                <?php 
-                                                $defaultImages = [
-                                                    'vetements' => '👕',
-                                                    'nourriture' => '🍎',
-                                                    'meubles' => '🛋️',
-                                                    'livres' => '📚',
-                                                    'electromenager' => '🔌',
-                                                    'divers' => '📦'
-                                                ];
-                                                echo $defaultImages[$don['categorie']] ?? '📦';
-                                                ?>
-                                            </div>
-                                        <?php endif; ?>
+                        <div class="donation-card">
+                            <div class="donation-image">
+                                <?php if(!empty($don['photo_principale'])): 
+                                    $image_path = '../' . $don['photo_principale'];
+                                    if(file_exists($image_path)): ?>
+                                        <img src="<?php echo $image_path; ?>" alt="<?php echo htmlspecialchars($don['titre']); ?>">
                                     <?php else: ?>
-                                        <div style="width: 100%; height: 100%; background: #f8f9fa; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 40px;">
+                                        <div class="image-placeholder">
                                             <?php 
                                             $defaultImages = [
                                                 'vetements' => '👕',
@@ -848,105 +888,96 @@ $page_title = 'كتالوج التبرعات';
                                             ?>
                                         </div>
                                     <?php endif; ?>
+                                <?php else: ?>
+                                    <div class="image-placeholder">
+                                        <?php 
+                                        echo $defaultImages[$don['categorie']] ?? '📦';
+                                        ?>
+                                    </div>
+                                <?php endif; ?>
+                                <span class="donation-badge">
+                                    <?php echo $categories[$don['categorie']] ?? $don['categorie']; ?>
+                                </span>
+                            </div>
+                            
+                            <div class="donation-content">
+                                <h3 class="donation-title"><?php echo htmlspecialchars($don['titre']); ?></h3>
+                                
+                                <div class="donation-meta">
+                                    <span class="meta-item">
+                                        <i class="fas fa-tag"></i> <?php echo $etats[$don['etat']] ?? $don['etat']; ?>
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($don['ville']); ?>
+                                    </span>
+                                    <?php if($don['livraison_option'] != 'none'): ?>
+                                        <span class="meta-item" style="background: #e3f2fd; color: #1976d2;">
+                                            <i class="fas fa-truck"></i> 
+                                            <?php echo $livraison_options[$don['livraison_option']] ?? ''; ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                                 
-                                <h4 style="margin-bottom: 10px;"><?php echo htmlspecialchars($don['titre']); ?></h4>
-                                
-                                <p style="color: #666; font-size: 14px; margin-bottom: 15px; height: 60px; overflow: hidden;">
+                                <p class="donation-description">
                                     <?php echo htmlspecialchars($don['description']); ?>
                                 </p>
-                                
-                                <!-- Badges -->
-                                <div style="margin-bottom: 15px;">
-                                    <span class="badge badge-primary"><?php echo $don['categorie']; ?></span>
-                                    <span class="badge badge-success"><?php echo $don['etat']; ?></span>
-                                </div>
-                                
-                                <!-- Informations -->
-                                <div style="font-size: 13px; color: #666; margin-bottom: 20px;">
-                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                        <i class="fas fa-map-marker-alt" style="margin-left: 8px;"></i>
-                                        <span><?php echo htmlspecialchars($don['ville'] ?: 'غير محدد'); ?></span>
+                            </div>
+                            
+                            <div class="donation-footer">
+                                <div class="donor-info">
+                                    <div class="donor-avatar">
+                                        <?php echo strtoupper(substr($don['donateur_nom'], 0, 1)); ?>
                                     </div>
-                                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                        <i class="fas fa-user" style="margin-left: 8px;"></i>
-                                        <span><?php echo htmlspecialchars($don['donateur_nom']); ?></span>
-                                    </div>
-                                    <div style="display: flex; align-items: center;">
-                                        <i class="fas fa-calendar" style="margin-left: 8px;"></i>
-                                        <span><?php echo date('d/m/Y', strtotime($don['created_at'])); ?></span>
+                                    <div class="donor-details">
+                                        <div class="donor-name"><?php echo htmlspecialchars($don['donateur_nom']); ?></div>
+                                        <div class="donor-city">
+                                            <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($don['donateur_ville'] ?? 'غير محدد'); ?>
+                                        </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Request Button -->
-                                <button onclick="openRequestModal(<?php echo $don['id']; ?>, '<?php echo htmlspecialchars(addslashes($don['titre'])); ?>')" 
-                                        class="btn btn-primary" style="width: 100%;">
-                                    <i class="fas fa-envelope"></i> تقديم طلب
+                                <button class="btn-request" onclick="openRequestModal(<?php echo $don['id']; ?>, '<?php echo htmlspecialchars(addslashes($don['titre'])); ?>')">
+                                    <i class="fas fa-hand-holding-heart"></i> طلب
                                 </button>
                             </div>
                         </div>
-                    </div>
                     <?php endforeach; ?>
-                </div>
-                
-                <!-- Statistics -->
-                <div class="card" style="margin-top: 30px;">
-                    <div class="card-body">
-                        <h4><i class="fas fa-chart-bar"></i> ملخص الكتالوج</h4>
-                        <div class="row" style="margin-top: 15px;">
-                            <div class="col-3">
-                                <div style="text-align: center;">
-                                    <h3 style="color: var(--accent);"><?php echo count($dons); ?></h3>
-                                    <p style="color: var(--secondary);">إجمالي التبرعات</p>
-                                </div>
-                            </div>
-                            <?php
-                            $categories_count = [];
-                            foreach($dons as $don) {
-                                $categories_count[$don['categorie']] = ($categories_count[$don['categorie']] ?? 0) + 1;
-                            }
-                            foreach($categories_count as $categorie => $count):
-                            ?>
-                            <div class="col-3">
-                                <div style="text-align: center;">
-                                    <h3 style="color: var(--accent);"><?php echo $count; ?></h3>
-                                    <p style="color: var(--secondary);"><?php echo $categorie; ?></p>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
                 </div>
             <?php endif; ?>
         </div>
     </div>
 
     <!-- Request Modal -->
-    <div id="requestModal" class="modal-overlay">
+    <div id="requestModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="margin: 0;">تقديم طلب</h3>
-                <button onclick="closeRequestModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">×</button>
+                <h3><i class="fas fa-hand-holding-heart"></i> طلب تبرع</h3>
+                <button class="modal-close" onclick="closeRequestModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form method="POST" action="catalogue.php" id="requestForm">
-                    <input type="hidden" name="don_id" id="don_id">
+                <form method="POST" action="">
+                    <input type="hidden" name="action" value="request_donation">
+                    <input type="hidden" name="don_id" id="modal_don_id">
+                    
                     <div class="form-group">
-                        <label class="form-label">التبرع المختار:</label>
-                        <p id="don_titre" style="font-weight: bold; padding: 12px; background: #f8f9fa; border-radius: 8px; margin: 0;"></p>
+                        <label class="form-label">التبرع: <span id="modal_don_title" style="color: var(--accent);"></span></label>
                     </div>
+                    
                     <div class="form-group">
-                        <label class="form-label">رسالة للمتبرع *</label>
-                        <textarea name="message_demande" class="form-control" required 
-                                placeholder="اشرح لماذا تحتاج هذا التبرع، وكيف تخطط لاستخدامه، واقترح موعد الاستلام..."
-                                rows="5"></textarea>
-                        <small style="color: #666;">يجب أن تكون رسالتك مهذبة وتشرح وضعك.</small>
+                        <label class="form-label">رسالتك إلى المتبرع *</label>
+                        <textarea name="message" class="form-control" placeholder="اكتب رسالة توضح سبب رغبتك في الحصول على هذا التبرع..." required></textarea>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            <i class="fas fa-info-circle"></i> اكتب رسالة واضحة ومؤدبة تشرح فيها سبب حاجتك لهذا التبرع
+                        </small>
                     </div>
-                    <div style="display: flex; gap: 15px;">
+                    
+                    <div style="display: flex; gap: 15px; justify-content: flex-start; margin-top: 20px;">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-paper-plane"></i> إرسال الطلب
                         </button>
-                        <button type="button" onclick="closeRequestModal()" class="btn btn-outline">إلغاء</button>
+                        <button type="button" class="btn btn-outline" onclick="closeRequestModal()">
+                            <i class="fas fa-times"></i> إلغاء
+                        </button>
                     </div>
                 </form>
             </div>
@@ -954,78 +985,35 @@ $page_title = 'كتالوج التبرعات';
     </div>
 
     <script>
-    // Modal functions
-    function openRequestModal(donId, donTitre) {
-        document.getElementById('don_id').value = donId;
-        document.getElementById('don_titre').textContent = donTitre;
-        document.getElementById('requestModal').style.display = 'flex';
-    }
-
-    function closeRequestModal() {
-        document.getElementById('requestModal').style.display = 'none';
-        document.getElementById('requestForm').reset();
-    }
-
-    // Close modal when clicking outside
-    document.getElementById('requestModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeRequestModal();
-        }
-    });
-
-    // Filters and search
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('searchInput');
-        const categorieFilter = document.getElementById('categorieFilter');
-        const villeFilter = document.getElementById('villeFilter');
-        const donsContainer = document.getElementById('donsContainer');
-        
-        function filterDons() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const selectedCategorie = categorieFilter.value;
-            const selectedVille = villeFilter.value;
-            
-            const dons = donsContainer.getElementsByClassName('don-card');
-            
-            for (let don of dons) {
-                const titre = don.getAttribute('data-titre');
-                const categorie = don.getAttribute('data-categorie');
-                const ville = don.getAttribute('data-ville');
-                
-                const matchesSearch = !searchTerm || titre.includes(searchTerm);
-                const matchesCategorie = !selectedCategorie || categorie === selectedCategorie;
-                const matchesVille = !selectedVille || ville === selectedVille;
-                
-                if (matchesSearch && matchesCategorie && matchesVille) {
-                    don.parentElement.style.display = 'block';
-                } else {
-                    don.parentElement.style.display = 'none';
-                }
-            }
-        }
-        
-        searchInput.addEventListener('input', filterDons);
-        categorieFilter.addEventListener('change', filterDons);
-        villeFilter.addEventListener('change', filterDons);
-    });
-    
-    // User dropdown functions
-    function toggleDropdown() {
-        const dropdown = document.getElementById('userDropdown');
-        dropdown.classList.toggle('active');
-    }
-    
     function toggleMenu() {
         const navLinks = document.getElementById('navLinks');
         navLinks.classList.toggle('active');
     }
     
-    // Close menus when clicking outside
+    function toggleDropdown() {
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.classList.toggle('active');
+    }
+    
+    function openRequestModal(donId, donTitle) {
+        document.getElementById('modal_don_id').value = donId;
+        document.getElementById('modal_don_title').textContent = donTitle;
+        document.getElementById('requestModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeRequestModal() {
+        document.getElementById('requestModal').classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+    
+    // إغلاق القوائم عند النقر خارجها
     document.addEventListener('click', function(event) {
         const navLinks = document.getElementById('navLinks');
         const menuToggle = document.querySelector('.menu-toggle');
         const userDropdown = document.getElementById('userDropdown');
         const userAvatar = document.querySelector('.user-avatar');
+        const modal = document.getElementById('requestModal');
         
         if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
             navLinks.classList.remove('active');
@@ -1033,6 +1021,18 @@ $page_title = 'كتالوج التبرعات';
         
         if (!userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
             userDropdown.classList.remove('active');
+        }
+        
+        // Close modal when clicking outside
+        if (event.target === modal) {
+            closeRequestModal();
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeRequestModal();
         }
     });
     </script>
