@@ -5,7 +5,7 @@ session_start();
 // Check if user is admin
 if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
     header('Location: ../index.php');
-    exit();
+    exit();   
 }
 
 require_once '../config/database.php';

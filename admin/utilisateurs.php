@@ -11,7 +11,7 @@ $query = "SELECT * FROM users WHERE type != 'admin' ORDER BY created_at DESC";
 $stmt = $db->prepare($query);
 $stmt->execute();
 $utilisateurs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+  
 $success = '';
 $error = '';
 
