@@ -807,7 +807,7 @@ $page_title = 'لوحة التحكم';
 <body>
     <!-- Navigation -->
     <nav class="navbar">
-        <a href="../index.php" class="logo">
+        <a href="dashboard.php" class="logo">
             <div class="logo-icon">
                 <i class="fas fa-hands-helping"></i>
             </div>
@@ -1045,3 +1045,5 @@ $page_title = 'لوحة التحكم';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

@@ -113,7 +113,7 @@ require_once 'header.php';
                     </div>
                     
                     <div class="text-center mt-5">
-                        <a href="index.php" class="btn btn-primary">
+                        <a href="/" class="btn btn-primary">
                             <i class="fas fa-home me-2"></i>العودة للصفحة الرئيسية
                         </a>
                         <a href="privacy-policy.php" class="btn btn-outline-primary me-2">

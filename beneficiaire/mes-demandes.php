@@ -733,7 +733,7 @@ $page_title = 'طلباتي';
 <body>
     <!-- Navigation -->
     <nav class="navbar">
-        <a href="../index.php" class="logo">
+        <a href="dashboard.php" class="logo">
             <div class="logo-icon">
                 <i class="fas fa-hands-helping"></i>
             </div>
@@ -1123,3 +1123,5 @@ $page_title = 'طلباتي';
     </script>
 </body>
 </html>
+<?php
+include '../includes/footer.php'; ?>

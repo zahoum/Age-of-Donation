@@ -846,7 +846,7 @@ $page_title = 'نشر تبرع جديد';
 <body>
     <!-- Navigation -->
     <nav class="navbar">
-        <a href="../index.php" class="logo">
+        <a href="dashboard.php" class="logo">
             <div class="logo-icon">
                 <i class="fas fa-hands-helping"></i>
             </div>

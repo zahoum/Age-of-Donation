@@ -53,7 +53,7 @@ function redirectByUserType() {
             header('Location: ../admin/dashboard.php');
             break;
         default:
-            header('Location: ../index.php');
+            header('Location: dashboard.php');
     }
     exit();
 }

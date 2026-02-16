@@ -812,7 +812,7 @@ $last_check = date('Y-m-d H:i:s', strtotime('-1 minute'));
 <body>
     <!-- Header -->
     <header class="app-header">
-        <a href="../index.php" class="logo">
+        <a href="dashboard.php" class="logo">
             <i class="fas fa-hands-helping"></i>
             <span>Age of Donnation</span>
         </a>
