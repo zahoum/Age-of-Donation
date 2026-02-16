@@ -24,38 +24,92 @@ $current_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
 $success = '';
 $error = '';
 
+
+
 // ========== تأكيد طلب ==========
 if (isset($_GET['confirm']) && isset($_GET['demande_id'])) {
     $demande_id = $_GET['demande_id'];
     
     try {
-        // تأكيد الطلب
-        $query = "UPDATE demandes SET statut = 'acceptee' WHERE id = :demande_id AND don_id IN (SELECT id FROM dons WHERE donateur_id = :user_id)";
+        // Démarrer une transaction
+        $db->beginTransaction();
+        
+        // 1. Récupérer les informations du don pour vérifier l'option de livraison
+        $query_check = "SELECT d.*, don.livraison_option, don.donateur_id, don.ville 
+                        FROM demandes d 
+                        INNER JOIN dons don ON d.don_id = don.id 
+                        WHERE d.id = :demande_id";
+        $stmt_check = $db->prepare($query_check);
+        $stmt_check->bindParam(':demande_id', $demande_id);
+        $stmt_check->execute();
+        $demande_info = $stmt_check->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$demande_info) {
+            throw new Exception("Demande non trouvée");
+        }
+        
+        // 2. Vérifier que le donateur est bien le propriétaire
+        if ($demande_info['donateur_id'] != $user_id) {
+            throw new Exception("Vous n'êtes pas autorisé à confirmer cette demande");
+        }
+        
+        // 3. Confirmer le statut de la demande
+        $query = "UPDATE demandes SET statut = 'acceptee' WHERE id = :demande_id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':demande_id', $demande_id);
-        $stmt->bindParam(':user_id', $user_id);
+        $stmt->execute();
         
-        if ($stmt->execute()) {
-            // تحديث حالة التبرع ليصبح محجوزاً
-            $query_don = "UPDATE dons SET statut = 'reserve' WHERE id = (SELECT don_id FROM demandes WHERE id = :demande_id)";
-            $stmt_don = $db->prepare($query_don);
-            $stmt_don->bindParam(':demande_id', $demande_id);
-            $stmt_don->execute();
+        // 4. Mettre à jour le statut du don et le marquer comme supprimé logiquement
+        $query_don = "UPDATE dons SET statut = 'donne', is_deleted = 1, deleted_at = NOW() 
+                     WHERE id = (SELECT don_id FROM demandes WHERE id = :demande_id)";
+        $stmt_don = $db->prepare($query_don);
+        $stmt_don->bindParam(':demande_id', $demande_id);
+        $stmt_don->execute();
+        
+        // 5. Refuser les autres demandes sur le même don
+        $query_refuse = "UPDATE demandes SET statut = 'refusee' 
+                         WHERE don_id = (SELECT don_id FROM demandes WHERE id = :demande_id) 
+                         AND id != :demande_id AND statut = 'en_attente'";
+        $stmt_refuse = $db->prepare($query_refuse);
+        $stmt_refuse->bindParam(':demande_id', $demande_id);
+        $stmt_refuse->execute();
+        
+        // 6. Créer une livraison si l'option de livraison n'est pas 'none'
+        if ($demande_info['livraison_option'] != 'none') {
+            // Calculer les frais de livraison selon l'option
+            $frais = 0;
+            if ($demande_info['livraison_option'] == 'fifty') {
+                $frais = 50; // 50% des frais à la charge du bénéficiaire
+            } elseif ($demande_info['livraison_option'] == 'full') {
+                $frais = 100; // 100% des frais à la charge du bénéficiaire
+            }
             
-            // رفض الطلبات الأخرى على نفس التبرع (إن وجدت)
-            $query_refuse = "UPDATE demandes SET statut = 'refusee' WHERE don_id = (SELECT don_id FROM demandes WHERE id = :demande_id) AND id != :demande_id AND statut = 'en_attente'";
-            $stmt_refuse = $db->prepare($query_refuse);
-            $stmt_refuse->bindParam(':demande_id', $demande_id);
-            $stmt_refuse->execute();
+            $query_livraison = "INSERT INTO livraisons 
+                (demande_id, frais_livraison, statut, code_postal, ville, created_at) 
+                VALUES 
+                (:demande_id, :frais, 'en_attente', '', :ville, NOW())";
+            $stmt_livraison = $db->prepare($query_livraison);
+            $stmt_livraison->bindParam(':demande_id', $demande_id);
+            $stmt_livraison->bindParam(':frais', $frais);
+            $stmt_livraison->bindParam(':ville', $demande_info['ville']);
+            $stmt_livraison->execute();
             
-            $success = "✅ تم تأكيد الطلب بنجاح!";
+            // Récupérer l'ID de la livraison créée
+            $livraison_id = $db->lastInsertId();
         }
-    } catch(PDOException $e) {
+        
+        // Valider la transaction
+        $db->commit();
+        
+        $success = "✅ تم تأكيد الطلب بنجاح" . 
+                   ($demande_info['livraison_option'] != 'none' ? " وتم إنشاء مهمة توصيل" : "");
+        
+    } catch(Exception $e) {
+        // Annuler la transaction en cas d'erreur
+        $db->rollBack();
         $error = "❌ خطأ في تأكيد الطلب: " . $e->getMessage();
     }
-}
-
-// ========== رفض طلب ==========
+}// ========== رفض طلب ==========
 if (isset($_GET['refuse']) && isset($_GET['demande_id'])) {
     $demande_id = $_GET['refuse'];
     

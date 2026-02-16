@@ -10,7 +10,9 @@ $db = $database->getConnection();
 $user_id = $_SESSION['user_id'];
 
 // Vérifier si le livreur est actif
-$query = "SELECT l.* FROM livreurs l WHERE l.user_id = :user_id AND l.statut = 'actif'";
+$query = "SELECT l.*, u.ville FROM livreurs l 
+          INNER JOIN users u ON l.user_id = u.id 
+          WHERE l.user_id = :user_id AND l.statut = 'actif'";
 $stmt = $db->prepare($query);
 $stmt->bindParam(":user_id", $user_id);
 $stmt->execute();
@@ -22,45 +24,83 @@ if (!$livreur) {
     exit;
 }
 
-// Récupérer le filtre
-$filter = isset($_GET['filter']) ? $_GET['filter'] : 'toutes';
+// Récupérer le filtre et la ville
+$filter = isset($_GET['filter']) ? $_GET['filter'] : 'disponibles';
+$selected_ville = isset($_GET['ville']) ? $_GET['ville'] : '';
 
-// Récupérer les missions - CORRECTION: retrait des colonnes qui n'existent pas
+// Récupérer toutes les villes disponibles
+$ville_query = "SELECT DISTINCT ville FROM dons WHERE ville IS NOT NULL AND ville != '' ORDER BY ville";
+$ville_stmt = $db->prepare($ville_query);
+$ville_stmt->execute();
+$villes = $ville_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Récupérer les missions
 $query = "
-    SELECT l.*, d.titre as don_titre, u.nom as beneficiaire_nom, 
-           u2.nom as donateur_nom, do.adresse_retrait, do.ville
+    SELECT l.*, 
+           d.titre as don_titre, 
+           d.ville,
+           d.adresse_retrait,
+           d.categorie,
+           d.etat,
+           u.nom as beneficiaire_nom, 
+           u.telephone as beneficiaire_telephone,
+           u2.nom as donateur_nom,
+           u2.telephone as donateur_telephone,
+           de.message_demande,
+           de.beneficiaire_id,
+           d.donateur_id
     FROM livraisons l
     INNER JOIN demandes de ON l.demande_id = de.id
     INNER JOIN dons d ON de.don_id = d.id
     INNER JOIN users u ON de.beneficiaire_id = u.id
     INNER JOIN users u2 ON d.donateur_id = u2.id
-    INNER JOIN dons do ON de.don_id = do.id
     WHERE 1=1
 ";
 
+// Construction dynamique de la requête selon les filtres
+$params = [];
+
 if($filter == 'disponibles') {
-    $query .= " AND l.livreur_id IS NULL";
+    $query .= " AND l.livreur_id IS NULL AND l.statut = 'en_attente'";
+    
+    // Filtre par ville pour les missions disponibles
+    if(!empty($selected_ville)) {
+        $query .= " AND d.ville = :ville";
+        $params[':ville'] = $selected_ville;
+    }
 } elseif($filter == 'en_cours') {
     $query .= " AND l.livreur_id = :user_id AND l.statut IN ('assignee', 'en_cours')";
+    $params[':user_id'] = $user_id;
 } elseif($filter == 'terminees') {
     $query .= " AND l.livreur_id = :user_id AND l.statut = 'livree'";
+    $params[':user_id'] = $user_id;
 } elseif($filter == 'mes') {
     $query .= " AND l.livreur_id = :user_id";
+    $params[':user_id'] = $user_id;
+} elseif($filter == 'toutes') {
+    // Pas de filtre par défaut
+    if(!empty($selected_ville)) {
+        $query .= " AND d.ville = :ville";
+        $params[':ville'] = $selected_ville;
+    }
 }
 
 $query .= " ORDER BY l.created_at DESC";
 
 $stmt = $db->prepare($query);
-if(in_array($filter, ['en_cours', 'terminees', 'mes'])) {
-    $stmt->bindParam(":user_id", $user_id);
+
+// Binder les paramètres
+foreach($params as $key => $value) {
+    $stmt->bindValue($key, $value);
 }
+
 $stmt->execute();
 $missions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Compter les missions par statut pour les onglets
 $count_query = "
     SELECT 
-        COUNT(CASE WHEN livreur_id IS NULL THEN 1 END) as disponibles,
+        COUNT(CASE WHEN livreur_id IS NULL AND statut = 'en_attente' THEN 1 END) as disponibles,
         COUNT(CASE WHEN livreur_id = :user_id AND statut IN ('assignee', 'en_cours') THEN 1 END) as en_cours,
         COUNT(CASE WHEN livreur_id = :user_id AND statut = 'livree' THEN 1 END) as terminees
     FROM livraisons
@@ -79,6 +119,25 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     margin-bottom: 25px;
+}
+
+.city-filter {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.city-select {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    min-width: 200px;
+    font-family: 'Tajawal', sans-serif;
 }
 
 .mission-card {
@@ -109,6 +168,7 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
     gap: 20px;
     color: var(--secondary);
     font-size: 14px;
+    flex-wrap: wrap;
 }
 
 .mission-details i {
@@ -130,6 +190,19 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
     margin-bottom: 10px;
 }
 
+.ville-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 10px;
+}
+
 @media (max-width: 768px) {
     .mission-card {
         flex-direction: column;
@@ -145,6 +218,11 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
     .mission-details {
         flex-direction: column;
         gap: 8px;
+    }
+    
+    .city-filter {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 </style>
@@ -188,10 +266,12 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
 <!-- Filtres -->
 <div class="missions-filters">
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-        <a href="?filter=toutes" class="btn <?php echo $filter == 'toutes' ? 'btn-primary' : 'btn-outline'; ?>">
+        <a href="?filter=toutes<?php echo !empty($selected_ville) ? '&ville='.$selected_ville : ''; ?>" 
+           class="btn <?php echo $filter == 'toutes' ? 'btn-primary' : 'btn-outline'; ?>">
             جميع المهام
         </a>
-        <a href="?filter=disponibles" class="btn <?php echo $filter == 'disponibles' ? 'btn-primary' : 'btn-outline'; ?>">
+        <a href="?filter=disponibles<?php echo !empty($selected_ville) ? '&ville='.$selected_ville : ''; ?>" 
+           class="btn <?php echo $filter == 'disponibles' ? 'btn-primary' : 'btn-outline'; ?>">
             <i class="fas fa-clock"></i> المتاحة
         </a>
         <a href="?filter=en_cours" class="btn <?php echo $filter == 'en_cours' ? 'btn-primary' : 'btn-outline'; ?>">
@@ -204,6 +284,31 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
             <i class="fas fa-user"></i> مهامي
         </a>
     </div>
+    
+    <!-- Filtre par ville (visible seulement pour les onglets qui affichent les missions disponibles) -->
+    <?php if(in_array($filter, ['disponibles', 'toutes'])): ?>
+    <div class="city-filter">
+        <i class="fas fa-filter" style="color: var(--accent);"></i>
+        <span style="font-weight: 500;">تصفية حسب المدينة:</span>
+        <form method="GET" style="display: flex; gap: 10px; flex: 1;">
+            <input type="hidden" name="filter" value="<?php echo $filter; ?>">
+            <select name="ville" class="city-select" onchange="this.form.submit()">
+                <option value="">جميع المدن</option>
+                <?php foreach($villes as $ville): ?>
+                    <option value="<?php echo htmlspecialchars($ville['ville']); ?>" 
+                            <?php echo $selected_ville == $ville['ville'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($ville['ville']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <?php if(!empty($selected_ville)): ?>
+                <a href="?filter=<?php echo $filter; ?>" class="btn btn-outline btn-sm">
+                    <i class="fas fa-times"></i> إلغاء
+                </a>
+            <?php endif; ?>
+        </form>
+    </div>
+    <?php endif; ?>
 </div>
 
 <!-- Liste des missions -->
@@ -212,13 +317,27 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
         <h3>
             <?php 
             switch($filter) {
-                case 'disponibles': echo '<i class="fas fa-clock"></i> المهام المتاحة'; break;
+                case 'disponibles': 
+                    echo '<i class="fas fa-clock"></i> المهام المتاحة';
+                    if(!empty($selected_ville)) {
+                        echo ' في ' . htmlspecialchars($selected_ville);
+                    }
+                    break;
                 case 'en_cours': echo '<i class="fas fa-play-circle"></i> المهام الجارية'; break;
                 case 'terminees': echo '<i class="fas fa-check-circle"></i> المهام المنجزة'; break;
                 case 'mes': echo '<i class="fas fa-user"></i> مهامي'; break;
-                default: echo '<i class="fas fa-list"></i> جميع المهام';
+                default: 
+                    echo '<i class="fas fa-list"></i> جميع المهام';
+                    if(!empty($selected_ville)) {
+                        echo ' في ' . htmlspecialchars($selected_ville);
+                    }
             }
             ?>
+            <?php if(!empty($selected_ville)): ?>
+                <span class="ville-tag">
+                    <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($selected_ville); ?>
+                </span>
+            <?php endif; ?>
         </h3>
     </div>
     <div class="card-body">
@@ -238,11 +357,11 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                     switch($mission['statut']) {
                         case 'en_attente':
                             $status_class = 'badge-warning';
-                            $status_text = 'في الانتظار';
+                            $status_text = 'في انتظار مندوب';
                             break;
                         case 'assignee':
                             $status_class = 'badge-info';
-                            $status_text = 'معينة';
+                            $status_text = 'تم التعيين';
                             break;
                         case 'en_cours':
                             $status_class = 'badge-primary';
@@ -258,17 +377,37 @@ $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
                     }
                     ?>
                     <span class="badge <?php echo $status_class; ?> mission-badge"><?php echo $status_text; ?></span>
-                    <h3><?php echo htmlspecialchars($mission['don_titre']); ?></h3>
+                    
+                    <h3>
+                        <?php echo htmlspecialchars($mission['don_titre']); ?>
+                        <span class="ville-tag" style="margin-right: 10px;">
+                            <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($mission['ville']); ?>
+                        </span>
+                    </h3>
+                    
                     <div class="mission-details">
                         <span><i class="fas fa-user"></i> المستفيد: <?php echo htmlspecialchars($mission['beneficiaire_nom']); ?></span>
+                        <span><i class="fas fa-phone"></i> هاتف: <?php echo htmlspecialchars($mission['beneficiaire_telephone'] ?? 'غير متوفر'); ?></span>
                         <span><i class="fas fa-user"></i> المتبرع: <?php echo htmlspecialchars($mission['donateur_nom']); ?></span>
-                        <span><i class="fas fa-map-marker-alt"></i> المدينة: <?php echo htmlspecialchars($mission['ville']); ?></span>
+                        <span><i class="fas fa-tag"></i> <?php echo $mission['categorie']; ?></span>
                         <span><i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($mission['created_at'])); ?></span>
+                        <?php if($mission['frais_livraison'] > 0): ?>
+                            <span><i class="fas fa-money-bill"></i> رسوم: <?php echo $mission['frais_livraison']; ?> درهم</span>
+                        <?php endif; ?>
                     </div>
+                    
                     <?php if($mission['adresse_retrait']): ?>
                     <div style="margin-top: 10px; color: var(--secondary); font-size: 13px;">
                         <i class="fas fa-location-dot"></i> 
-                        <?php echo htmlspecialchars($mission['adresse_retrait']); ?>
+                        عنوان الاستلام: <?php echo htmlspecialchars($mission['adresse_retrait']); ?>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if($mission['message_demande']): ?>
+                    <div style="margin-top: 8px; color: var(--secondary); font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 5px;">
+                        <i class="fas fa-comment"></i> 
+                        <?php echo nl2br(htmlspecialchars(substr($mission['message_demande'], 0, 100))); ?>
+                        <?php if(strlen($mission['message_demande']) > 100): ?>...<?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>

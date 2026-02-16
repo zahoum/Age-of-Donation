@@ -96,10 +96,10 @@ $query_dons = "
            (SELECT COUNT(*) FROM demandes WHERE don_id = d.id) as nb_demandes
     FROM dons d
     INNER JOIN users u ON d.donateur_id = u.id
-    WHERE d.statut = 'disponible'
+    WHERE d.statut = 'disponible' 
+    AND (d.is_deleted IS NULL OR d.is_deleted = 0)
     ORDER BY d.created_at DESC
 ";
-
 $dons = $db->query($query_dons)->fetchAll(PDO::FETCH_ASSOC);
 
 // تجهيز الفئات والحالات للعرض
@@ -535,6 +535,7 @@ $page_title = 'كتالوج التبرعات';
             margin-bottom: 15px;
             display: -webkit-box;
             -webkit-line-clamp: 3;
+            line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }

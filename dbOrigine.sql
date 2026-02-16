@@ -223,6 +223,20 @@ ADD COLUMN `signature` varchar(255) DEFAULT NULL ;
 -- new modification in laivraison option 
 ALTER TABLE dons ADD COLUMN livraison_option ENUM('none', 'fifty', 'full') DEFAULT 'none' AFTER ville;
 -- =============================================
+
+-- Vérifier et ajouter les colonnes manquantes si nécessaire
+ALTER TABLE livraisons 
+ADD COLUMN IF NOT EXISTS `ville` varchar(100) DEFAULT NULL AFTER `code_postal`,
+ADD COLUMN IF NOT EXISTS `frais_livraison` decimal(10,2) DEFAULT 0.00 AFTER `livreur_id`;
+
+
+-- Ajouter une colonne pour la suppression logique dans la table dons
+ALTER TABLE dons 
+ADD COLUMN `is_deleted` TINYINT(1) DEFAULT 0 AFTER `statut`,
+ADD COLUMN `deleted_at` TIMESTAMP NULL DEFAULT NULL AFTER `is_deleted`;
+
+
+
 -- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================

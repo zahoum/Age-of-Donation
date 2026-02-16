@@ -66,6 +66,26 @@ $stats = [
     'reserve' => array_sum(array_map(fn($d) => $d['statut'] == 'reserve' ? 1 : 0, $dons)),
     'donne' => array_sum(array_map(fn($d) => $d['statut'] == 'donne' ? 1 : 0, $dons))
 ];
+// Récupérer les dons du donateur (y compris ceux supprimés logiquement)
+$query_dons = "
+    SELECT d.*, 
+           (SELECT COUNT(*) FROM demandes WHERE don_id = d.id AND statut = 'en_attente') as demandes_attente,
+           (SELECT COUNT(*) FROM demandes WHERE don_id = d.id AND statut = 'acceptee') as demandes_acceptees
+    FROM dons d
+    WHERE d.donateur_id = :user_id
+    ORDER BY 
+        CASE 
+            WHEN d.is_deleted = 1 THEN 1 
+            ELSE 0 
+        END,
+        d.created_at DESC
+";
+
+$stmt = $db->prepare($query_dons);
+$stmt->bindParam(':user_id', $user_id);
+$stmt->execute();
+$dons = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 
 $page_title = 'تبرعاتي';
 ?>
