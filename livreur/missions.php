@@ -1140,9 +1140,11 @@ $page_title = 'مهام التوصيل';
             navLinks.classList.remove('active');
         }
         
+        
         if (!userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
             userDropdown.classList.remove('active');
         }
+
     });
     </script>
 </body>
