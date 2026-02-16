@@ -24,8 +24,6 @@ $current_user = $stmt_user->fetch(PDO::FETCH_ASSOC);
 $success = '';
 $error = '';
 
-
-
 // ========== تأكيد طلب ==========
 if (isset($_GET['confirm']) && isset($_GET['demande_id'])) {
     $demande_id = $_GET['demande_id'];
@@ -34,10 +32,12 @@ if (isset($_GET['confirm']) && isset($_GET['demande_id'])) {
         // Démarrer une transaction
         $db->beginTransaction();
         
-        // 1. Récupérer les informations du don pour vérifier l'option de livraison
-        $query_check = "SELECT d.*, don.livraison_option, don.donateur_id, don.ville 
+        // 1. Récupérer les informations du don
+        $query_check = "SELECT d.*, don.livraison_option, don.donateur_id, don.ville, don.titre as don_titre,
+                               u.nom as beneficiaire_nom, u.telephone as beneficiaire_telephone, u.adresse as beneficiaire_adresse
                         FROM demandes d 
                         INNER JOIN dons don ON d.don_id = don.id 
+                        INNER JOIN users u ON d.beneficiaire_id = u.id
                         WHERE d.id = :demande_id";
         $stmt_check = $db->prepare($query_check);
         $stmt_check->bindParam(':demande_id', $demande_id);
@@ -59,14 +59,14 @@ if (isset($_GET['confirm']) && isset($_GET['demande_id'])) {
         $stmt->bindParam(':demande_id', $demande_id);
         $stmt->execute();
         
-        // 4. Mettre à jour le statut du don et le marquer comme supprimé logiquement
+        // 4. Mettre à jour le statut du don
         $query_don = "UPDATE dons SET statut = 'donne', is_deleted = 1, deleted_at = NOW() 
                      WHERE id = (SELECT don_id FROM demandes WHERE id = :demande_id)";
         $stmt_don = $db->prepare($query_don);
         $stmt_don->bindParam(':demande_id', $demande_id);
         $stmt_don->execute();
         
-        // 5. Refuser les autres demandes sur le même don
+        // 5. Refuser les autres demandes
         $query_refuse = "UPDATE demandes SET statut = 'refusee' 
                          WHERE don_id = (SELECT don_id FROM demandes WHERE id = :demande_id) 
                          AND id != :demande_id AND statut = 'en_attente'";
@@ -74,42 +74,38 @@ if (isset($_GET['confirm']) && isset($_GET['demande_id'])) {
         $stmt_refuse->bindParam(':demande_id', $demande_id);
         $stmt_refuse->execute();
         
-        // 6. Créer une livraison si l'option de livraison n'est pas 'none'
+        // 6. Créer une livraison
         if ($demande_info['livraison_option'] != 'none') {
-            // Calculer les frais de livraison selon l'option
+            // Calculer les frais
             $frais = 0;
             if ($demande_info['livraison_option'] == 'fifty') {
-                $frais = 50; // 50% des frais à la charge du bénéficiaire
+                $frais = 5.00;
             } elseif ($demande_info['livraison_option'] == 'full') {
-                $frais = 100; // 100% des frais à la charge du bénéficiaire
+                $frais = 10.00;
             }
             
+            // Insérer la livraison
             $query_livraison = "INSERT INTO livraisons 
-                (demande_id, frais_livraison, statut, code_postal, ville, created_at) 
+                (demande_id, livreur_id, frais_livraison, statut, ville, created_at) 
                 VALUES 
-                (:demande_id, :frais, 'en_attente', '', :ville, NOW())";
+                (:demande_id, NULL, :frais, 'en_attente', :ville, NOW())";
             $stmt_livraison = $db->prepare($query_livraison);
             $stmt_livraison->bindParam(':demande_id', $demande_id);
             $stmt_livraison->bindParam(':frais', $frais);
             $stmt_livraison->bindParam(':ville', $demande_info['ville']);
             $stmt_livraison->execute();
-            
-            // Récupérer l'ID de la livraison créée
-            $livraison_id = $db->lastInsertId();
         }
         
-        // Valider la transaction
         $db->commit();
-        
-        $success = "✅ تم تأكيد الطلب بنجاح" . 
-                   ($demande_info['livraison_option'] != 'none' ? " وتم إنشاء مهمة توصيل" : "");
+        $success = "✅ تم تأكيد الطلب بنجاح وتم إنشاء مهمة توصيل";
         
     } catch(Exception $e) {
-        // Annuler la transaction en cas d'erreur
         $db->rollBack();
         $error = "❌ خطأ في تأكيد الطلب: " . $e->getMessage();
     }
-}// ========== رفض طلب ==========
+}
+
+// ========== رفض طلب ==========
 if (isset($_GET['refuse']) && isset($_GET['demande_id'])) {
     $demande_id = $_GET['refuse'];
     
@@ -140,6 +136,7 @@ $query_pending = "
            don.etat,
            don.ville as don_ville,
            don.adresse_retrait,
+           don.livraison_option,
            don.statut as don_statut
     FROM demandes d
     INNER JOIN users u ON d.beneficiaire_id = u.id
@@ -154,15 +151,18 @@ $stmt_pending->bindParam(':user_id', $user_id);
 $stmt_pending->execute();
 $pending_demandes = $stmt_pending->fetchAll(PDO::FETCH_ASSOC);
 
-// ========== جلب الطلبات المؤكدة مؤخراً ==========
+// ========== جلب الطلبات المؤكدة ==========
 $query_confirmed = "
     SELECT d.*, 
            u.nom as beneficiaire_nom, 
            don.titre as don_titre,
-           don.categorie
+           don.categorie,
+           l.id as livraison_id,
+           l.statut as livraison_statut
     FROM demandes d
     INNER JOIN users u ON d.beneficiaire_id = u.id
     INNER JOIN dons don ON d.don_id = don.id
+    LEFT JOIN livraisons l ON d.id = l.demande_id
     WHERE don.donateur_id = :user_id 
     AND d.statut = 'acceptee'
     ORDER BY d.created_at DESC
@@ -211,7 +211,6 @@ $page_title = 'تأكيد الطلبات';
             line-height: 1.6;
         }
         
-        /* Navbar */
         .navbar {
             background: white;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -353,21 +352,18 @@ $page_title = 'تأكيد الطلبات';
             background: #ffebee;
         }
         
-        /* Main Content */
         .main-content {
             margin-top: 90px;
             padding: 20px;
             min-height: calc(100vh - 160px);
         }
         
-        /* Container */
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
         }
         
-        /* Welcome Section */
         .welcome-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -446,7 +442,6 @@ $page_title = 'تأكيد الطلبات';
             margin: 0;
         }
         
-        /* Cards */
         .card {
             background: white;
             border-radius: 12px;
@@ -483,7 +478,6 @@ $page_title = 'تأكيد الطلبات';
             padding: 25px;
         }
         
-        /* Buttons */
         .btn {
             padding: 10px 25px;
             border-radius: 8px;
@@ -544,7 +538,6 @@ $page_title = 'تأكيد الطلبات';
             font-size: 13px;
         }
         
-        /* Row and Col */
         .row {
             display: flex;
             flex-wrap: wrap;
@@ -582,7 +575,6 @@ $page_title = 'تأكيد الطلبات';
             }
         }
         
-        /* Alert */
         .alert {
             padding: 15px 20px;
             border-radius: 10px;
@@ -602,7 +594,6 @@ $page_title = 'تأكيد الطلبات';
             color: #721c24;
         }
         
-        /* Badge */
         .badge {
             padding: 5px 10px;
             border-radius: 20px;
@@ -626,7 +617,11 @@ $page_title = 'تأكيد الطلبات';
             color: #155724;
         }
         
-        /* Demand Card */
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
         .demand-card {
             border: 1px solid #e0e0e0;
             border-radius: 12px;
@@ -700,7 +695,6 @@ $page_title = 'تأكيد الطلبات';
             gap: 10px;
         }
         
-        /* Stats Mini */
         .stat-mini {
             text-align: center;
             padding: 15px;
@@ -719,7 +713,6 @@ $page_title = 'تأكيد الطلبات';
             margin: 0;
         }
         
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -732,7 +725,6 @@ $page_title = 'تأكيد الطلبات';
             opacity: 0.3;
         }
         
-        /* Tips List */
         .tips-list {
             padding-right: 20px;
             color: #666;
@@ -743,7 +735,6 @@ $page_title = 'تأكيد الطلبات';
             margin-bottom: 10px;
         }
         
-        /* Mobile Menu Toggle */
         .menu-toggle {
             display: none;
             background: none;
@@ -830,10 +821,8 @@ $page_title = 'تأكيد الطلبات';
         </div>
     </nav>
     
-    <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-content">
                     <div class="welcome-icon">
@@ -862,7 +851,6 @@ $page_title = 'تأكيد الطلبات';
 
             <div class="row">
                 <div class="col-8">
-                    <!-- Pending Demands -->
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fas fa-clock" style="color: var(--warning);"></i> الطلبات في الانتظار (<?php echo count($pending_demandes); ?>)</h3>
@@ -872,7 +860,6 @@ $page_title = 'تأكيد الطلبات';
                                 <div class="empty-state">
                                     <i class="fas fa-check-circle" style="color: #00b894;"></i>
                                     <p>لا توجد طلبات في الانتظار</p>
-                                    <p style="font-size: 14px; color: #888;">جميع الطلبات تمت معالجتها</p>
                                 </div>
                             <?php else: ?>
                                 <?php foreach($pending_demandes as $demande): ?>
@@ -892,40 +879,28 @@ $page_title = 'تأكيد الطلبات';
                                                 <div class="beneficiary-avatar">
                                                     <?php echo strtoupper(substr($demande['beneficiaire_nom'], 0, 1)); ?>
                                                 </div>
-                                                <h5 style="margin-bottom: 5px;"><?php echo htmlspecialchars($demande['beneficiaire_nom']); ?></h5>
+                                                <h5><?php echo htmlspecialchars($demande['beneficiaire_nom']); ?></h5>
                                                 <?php if($demande['beneficiaire_ville']): ?>
-                                                    <div style="font-size: 13px; color: #666;">
+                                                    <div style="font-size: 13px;">
                                                         <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($demande['beneficiaire_ville']); ?>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
                                             
                                             <div class="col-5">
-                                                <h5 style="color: var(--dark); margin-bottom: 10px;">
-                                                    <i class="fas fa-gift" style="color: var(--accent);"></i> <?php echo htmlspecialchars($demande['don_titre']); ?>
-                                                </h5>
+                                                <h5><?php echo htmlspecialchars($demande['don_titre']); ?></h5>
                                                 
                                                 <div style="margin-bottom: 10px;">
                                                     <span class="badge badge-primary"><?php echo $demande['categorie']; ?></span>
-                                                    <span class="badge badge-success" style="margin-right: 5px;">
-                                                        <?php 
-                                                        $etats = [
-                                                            'neuf' => 'جديد',
-                                                            'bon_etat' => 'حالة جيدة',
-                                                            'usage' => 'مستعمل'
-                                                        ];
-                                                        echo $etats[$demande['etat']] ?? $demande['etat'];
-                                                        ?>
-                                                    </span>
+                                                    <span class="badge badge-success"><?php echo $demande['etat']; ?></span>
+                                                    <?php if($demande['livraison_option'] != 'none'): ?>
+                                                        <span class="badge badge-info">توصيل</span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 
                                                 <div class="message-box">
-                                                    <strong style="color: var(--accent); display: block; margin-bottom: 8px;">
-                                                        <i class="fas fa-quote-right"></i> رسالة المستفيد:
-                                                    </strong>
-                                                    <p style="color: #333; line-height: 1.6;">
-                                                        <?php echo nl2br(htmlspecialchars($demande['message_demande'])); ?>
-                                                    </p>
+                                                    <strong>رسالة المستفيد:</strong>
+                                                    <p><?php echo nl2br(htmlspecialchars($demande['message_demande'])); ?></p>
                                                 </div>
                                                 
                                                 <div class="info-item">
@@ -952,11 +927,6 @@ $page_title = 'تأكيد الطلبات';
                                                        class="btn btn-outline">
                                                         <i class="fas fa-comments"></i> التواصل
                                                     </a>
-                                                    
-                                                    <a href="voir-don.php?id=<?php echo $demande['don_id']; ?>" 
-                                                       class="btn btn-outline">
-                                                        <i class="fas fa-eye"></i> عرض التبرع
-                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -966,46 +936,26 @@ $page_title = 'تأكيد الطلبات';
                             <?php endif; ?>
                         </div>
                     </div>
-                    
-                    <!-- Tips -->
-                    <?php if(!empty($pending_demandes)): ?>
-                    <div class="card" style="background: #f8f9fa;">
-                        <div class="card-body">
-                            <h4 style="color: var(--accent); margin-bottom: 15px;">
-                                <i class="fas fa-info-circle"></i> نصائح للتعامل مع الطلبات
-                            </h4>
-                            <ul class="tips-list">
-                                <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> رد على الطلبات في أسرع وقت ممكن</li>
-                                <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> تواصل مع المستفيد لترتيب موعد الاستلام</li>
-                                <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> تأكد من أن المستفيد قادر على استلام التبرع</li>
-                                <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> يمكنك التواصل عبر المراسلة أو الهاتف</li>
-                                <li><i class="fas fa-check-circle" style="color: var(--success); margin-left: 8px;"></i> بعد التأكيد، سيتم رفض الطلبات الأخرى تلقائياً</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <?php endif; ?>
                 </div>
                 
                 <div class="col-4">
-                    <!-- Quick Stats -->
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fas fa-chart-bar"></i> إحصائيات سريعة</h3>
+                            <h3><i class="fas fa-chart-bar"></i> إحصائيات</h3>
                         </div>
                         <div class="card-body">
                             <div class="stat-mini" style="margin-bottom: 15px;">
                                 <h4 style="color: var(--warning);"><?php echo count($pending_demandes); ?></h4>
-                                <p>طلب في الانتظار</p>
+                                <p>طلبات في الانتظار</p>
                             </div>
                             
                             <div class="stat-mini">
                                 <h4 style="color: var(--success);"><?php echo count($confirmed_demandes); ?></h4>
-                                <p>طلب مؤكد</p>
+                                <p>طلبات مؤكدة</p>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Confirmed Demands -->
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fas fa-check-circle" style="color: var(--success);"></i> آخر الطلبات المؤكدة</h3>
@@ -1013,7 +963,7 @@ $page_title = 'تأكيد الطلبات';
                         <div class="card-body">
                             <?php if(empty($confirmed_demandes)): ?>
                                 <div class="empty-state" style="padding: 20px;">
-                                    <i class="fas fa-inbox" style="font-size: 40px;"></i>
+                                    <i class="fas fa-inbox"></i>
                                     <p>لا توجد طلبات مؤكدة</p>
                                 </div>
                             <?php else: ?>
@@ -1026,42 +976,23 @@ $page_title = 'تأكيد الطلبات';
                                             </div>
                                             <div>
                                                 <strong><?php echo htmlspecialchars($demande['beneficiaire_nom']); ?></strong>
-                                                <div style="font-size: 12px; color: #666;">
+                                                <div style="font-size: 12px;">
                                                     <?php echo date('d/m/Y', strtotime($demande['created_at'])); ?>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style="font-size: 13px; color: #333; margin-bottom: 8px;">
+                                        <div style="font-size: 13px;">
                                             <i class="fas fa-gift" style="color: var(--success);"></i> <?php echo htmlspecialchars($demande['don_titre']); ?>
                                         </div>
-                                        <div>
-                                            <span class="badge badge-success">مؤكد</span>
-                                            <span class="badge badge-primary" style="margin-right: 5px;"><?php echo $demande['categorie']; ?></span>
-                                        </div>
+                                        <?php if(isset($demande['livraison_id'])): ?>
+                                            <div style="margin-top: 8px;">
+                                                <span class="badge badge-info">تم إنشاء مهمة توصيل</span>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Actions -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-bolt"></i> إجراءات سريعة</h3>
-                        </div>
-                        <div class="card-body">
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                <a href="mes-dons.php" class="btn btn-outline">
-                                    <i class="fas fa-boxes"></i> عرض تبرعاتي
-                                </a>
-                                <a href="messagerie.php" class="btn btn-outline">
-                                    <i class="fas fa-comments"></i> الذهاب للمراسلة
-                                </a>
-                                <a href="publier-don.php" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> نشر تبرع جديد
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1071,13 +1002,11 @@ $page_title = 'تأكيد الطلبات';
 
     <script>
     function toggleMenu() {
-        const navLinks = document.getElementById('navLinks');
-        navLinks.classList.toggle('active');
+        document.getElementById('navLinks').classList.toggle('active');
     }
     
     function toggleDropdown() {
-        const dropdown = document.getElementById('userDropdown');
-        dropdown.classList.toggle('active');
+        document.getElementById('userDropdown').classList.toggle('active');
     }
     
     document.addEventListener('click', function(event) {

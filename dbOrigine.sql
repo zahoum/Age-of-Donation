@@ -261,7 +261,38 @@ ADD COLUMN IF NOT EXISTS `photo_livraison` varchar(255) DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS `signature` varchar(255) DEFAULT NULL 
 
 
+-- Check if the livraisons table has all required columns
+DESCRIBE livraisons;
 
+-- If missing columns, add them:
+ALTER TABLE livraisons 
+ADD COLUMN IF NOT EXISTS `livreur_id` int(11) DEFAULT NULL AFTER `demande_id`,
+ADD COLUMN IF NOT EXISTS `frais_livraison` decimal(10,2) DEFAULT 0.00 AFTER `livreur_id`,
+ADD COLUMN IF NOT EXISTS `code_postal` varchar(10) DEFAULT NULL AFTER `frais_livraison`,
+ADD COLUMN IF NOT EXISTS `ville` varchar(100) DEFAULT NULL AFTER `code_postal`,
+ADD COLUMN IF NOT EXISTS `instructions` text DEFAULT NULL AFTER `ville`,
+ADD COLUMN IF NOT EXISTS `date_livraison` datetime DEFAULT NULL AFTER `instructions`,
+ADD COLUMN IF NOT EXISTS `photo_livraison` varchar(255) DEFAULT NULL AFTER `date_livraison`,
+ADD COLUMN IF NOT EXISTS `signature` varchar(255) DEFAULT NULL AFTER `photo_livraison`;
+
+
+-- Insert missing deliveries for accepted demands that don't have a delivery record
+INSERT INTO livraisons (demande_id, livreur_id, frais_livraison, statut, ville, created_at)
+SELECT 
+    d.id,
+    NULL,
+    CASE 
+        WHEN don.livraison_option = 'fifty' THEN 5.00
+        WHEN don.livraison_option = 'full' THEN 10.00
+        ELSE 0.00
+    END,
+    'en_attente',
+    don.ville,
+    d.created_at
+FROM demandes d
+INNER JOIN dons don ON d.don_id = don.id
+WHERE d.statut = 'acceptee' 
+AND d.id NOT IN (SELECT demande_id FROM livraisons);
 -- =============================================
 -- INSERTION DES DONNÉES D'EXEMPLE
 -- =============================================

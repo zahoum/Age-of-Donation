@@ -239,69 +239,6 @@ require_once '../includes/header.php';
     </div>
 </div>
 
-<!-- Stats Cards -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-            <i class="fas fa-gift"></i>
-        </div>
-        <div class="stat-content">
-            <h3><?php echo $stats['total_dons'] ?? 0; ?></h3>
-            <p>إجمالي التبرعات</p>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
-            <i class="fas fa-check-circle"></i>
-        </div>
-        <div class="stat-content">
-            <h3><?php echo $stats['dons_actifs'] ?? 0; ?></h3>
-            <p>تبرعات نشطة</p>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
-            <i class="fas fa-clock"></i>
-        </div>
-        <div class="stat-content">
-            <h3><?php echo $stats['dons_reserves'] ?? 0; ?></h3>
-            <p>محجوزة</p>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
-            <i class="fas fa-heart"></i>
-        </div>
-        <div class="stat-content">
-            <h3><?php echo $stats['dons_termines'] ?? 0; ?></h3>
-            <p>تبرعات مكتملة</p>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="quick-actions">
-    <a href="publier-don.php" class="action-card">
-        <i class="fas fa-plus-circle"></i>
-        <h4>نشر تبرع</h4>
-        <p>انشر شيئاً جديداً للتبرع به</p>
-    </a>
-    <a href="mes-dons.php" class="action-card">
-        <i class="fas fa-boxes"></i>
-        <h4>تبرعاتي</h4>
-        <p>إدارة وتتبع تبرعاتك</p>
-    </a>
-    <a href="messagerie.php" class="action-card">
-        <i class="fas fa-comments"></i>
-        <h4>المراسلة</h4>
-        <p>تواصل مع المستفيدين</p>
-    </a>
-    <a href="profile.php" class="action-card">
-        <i class="fas fa-user-cog"></i>
-        <h4>الملف الشخصي</h4>
-        <p>إدارة معلومات حسابك</p>
-    </a>
-</div>
 
 <div class="grid-2">
     
