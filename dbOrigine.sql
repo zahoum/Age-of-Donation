@@ -254,6 +254,9 @@ CREATE TABLE IF NOT EXISTS `password_reset_temp` (
     `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE `dons` 
+ADD COLUMN `montant` DECIMAL(10,2) NOT NULL DEFAULT 0 
+AFTER `description`;
 -- =============================================
 -- INSERT USERS
 -- =============================================

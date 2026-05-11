@@ -36,7 +36,7 @@ try {
         $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
         $stmt->execute([$new_password_hash, $email]);
     }
-    
+
     echo "<div style='background: #d1ecf1; color: #0c5460; padding: 1rem; border-radius: 5px; margin: 1rem 0;'>";
     echo "✅ Tous les comptes de test ont été réinitialisés<br>";
     echo "Mot de passe pour tous: <strong>admin123</strong>";
