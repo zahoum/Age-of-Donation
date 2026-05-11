@@ -246,6 +246,14 @@ CREATE TABLE `notifications` (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `password_reset_temp` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `email` varchar(250) NOT NULL,
+    `key` varchar(250) NOT NULL,
+    `expDate` datetime NOT NULL,
+    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 -- =============================================
 -- INSERT USERS
 -- =============================================

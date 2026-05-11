@@ -1,10 +1,9 @@
 <?php
-// includes/contact-us.php
 
 session_start();
 
 $page_title = 'اتصل بنا';
-require_once 'header.php';
+// require_once 'header.php';
 
 // =========================
 // CSRF TOKEN

@@ -1,5 +1,6 @@
 <?php
 use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $conn = mysqli_connect("localhost", "root", "", "age_of_donnation");
 if (mysqli_connect_errno()) {
@@ -35,14 +36,25 @@ if (isset($_POST["email"]) && !empty($_POST["email"])) {
     if (!$email) {
         $error = "البريد الإلكتروني غير صالح";
     } else {
-        // secure query
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        // Fix: Check if users table exists first
+        $check_table = mysqli_query($conn, "SHOW TABLES LIKE 'users'");
+        if (mysqli_num_rows($check_table) == 0) {
+            $error = "جدول المستخدمين غير موجود";
+        } else {
+            // secure query - Fixed the bind_param issue
+            $stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE email = ?");
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "s", $email);
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
 
-        if ($result->num_rows == 0) {
-            $error = "لا يوجد مستخدم بهذا البريد الإلكتروني";
+                if (mysqli_num_rows($result) == 0) {
+                    $error = "لا يوجد مستخدم بهذا البريد الإلكتروني";
+                }
+                mysqli_stmt_close($stmt);
+            } else {
+                $error = "خطأ في الاستعلام";
+            }
         }
     }
 
@@ -53,41 +65,82 @@ if (isset($_POST["email"]) && !empty($_POST["email"])) {
         $expDate = date("Y-m-d H:i:s", strtotime("+1 day"));
         $key = md5(time()) . substr(md5(uniqid(rand(),1)),3,10);
 
-        mysqli_query(
-            $conn,
-            "INSERT INTO password_reset_temp (email, `key`, expDate)
-             VALUES ('$email', '$key', '$expDate')"
-        );
+        // Insert into password_reset_temp
+        $insert_stmt = mysqli_prepare($conn, "INSERT INTO password_reset_temp (email, `key`, expDate) VALUES (?, ?, ?)");
+        if ($insert_stmt) {
+            mysqli_stmt_bind_param($insert_stmt, "sss", $email, $key, $expDate);
+            mysqli_stmt_execute($insert_stmt);
+            mysqli_stmt_close($insert_stmt);
+        }
 
         $reset_link = "http://localhost/Age-of-Donation/auth/reset-password.php?key=$key&email=$email&action=reset";
 
         $body = "
-            <p>تم إرسال رابط استعادة كلمة المرور.</p>
-            <p><a href='$reset_link'>$reset_link</a></p>
+            <html>
+            <head>
+                <style>
+                    body{font-family:Arial,sans-serif;}
+                    .container{padding:20px;background:#f4f4f4;}
+                    .content{background:#fff;padding:20px;border-radius:5px;}
+                    .button{display:inline-block;padding:10px 20px;background:#667eea;color:#fff;text-decoration:none;border-radius:5px;}
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='content'>
+                        <h2>استعادة كلمة المرور</h2>
+                        <p>تم إرسال هذا البريد لاستعادة كلمة المرور الخاصة بك.</p>
+                        <p>لإعادة تعيين كلمة المرور، اضغط على الرابط التالي:</p>
+                        <p><a href='$reset_link' class='button'>إعادة تعيين كلمة المرور</a></p>
+                        <p>أو انسخ الرابط التالي:</p>
+                        <p>$reset_link</p>
+                        <p>هذا الرابط صالح لمدة 24 ساعة.</p>
+                        <hr>
+                        <p>إذا لم تطلب استعادة كلمة المرور، يرجى تجاهل هذا البريد.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
         ";
 
         require '../vendor/autoload.php';
 
         $mail = new PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = 'a.zahoum8425@uca.ac.ma';
-        $mail->Password = 'qezu unae pfrl vxbm';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
 
-        $mail->CharSet = 'UTF-8';
-        $mail->setFrom('a.zahoum8425@uca.ac.ma', 'Age of Donation Support');
-        $mail->addAddress($email);
-        $mail->isHTML(true);
-        $mail->Subject = 'استعادة كلمة المرور';
-        $mail->Body = $body;
+        try {
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = 'aissazahoum6@gmail.com';  // Your new Gmail
+            $mail->Password = 'dhcs iuxn bbol mvlf';  // Replace with your app password
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+            
+            // Fix SSL certificate issues
+            $mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                )
+            );
 
-        if (!$mail->send()) {
+            $mail->CharSet = 'UTF-8';
+            $mail->setFrom('aissazahoum6@gmail.com', 'Age of Donation Support');
+            $mail->addAddress($email);
+            $mail->isHTML(true);
+            $mail->Subject = 'استعادة كلمة المرور';
+            $mail->Body = $body;
+            $mail->AltBody = strip_tags($body);
+
+            if ($mail->send()) {
+                echo '<div class="alert alert-success"><strong>نجاح!</strong> تم إرسال رابط استعادة كلمة المرور.</div>';
+            } else {
+                echo '<div class="alert alert-danger"><strong>خطأ!</strong> '.$mail->ErrorInfo.'</div>';
+            }
+        } catch (Exception $e) {
             echo '<div class="alert alert-danger"><strong>خطأ!</strong> '.$mail->ErrorInfo.'</div>';
-        } else {
-            echo '<div class="alert alert-success"><strong>نجاح!</strong> تم إرسال رابط استعادة كلمة المرور.</div>';
         }
     }
 }
