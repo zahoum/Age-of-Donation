@@ -419,7 +419,7 @@ new Chart(monthlyCtx, {
 // Update time
 function updateTime() {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('ar-SA');
+    const timeString = now.toLocaleTimeString('fr-SA');
     document.getElementById('current-time').textContent = timeString;
     document.getElementById('welcome-time').textContent = timeString;
 }

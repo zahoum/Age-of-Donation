@@ -257,6 +257,48 @@ CREATE TABLE IF NOT EXISTS `password_reset_temp` (
 ALTER TABLE `dons` 
 ADD COLUMN `montant` DECIMAL(10,2) NOT NULL DEFAULT 0 
 AFTER `description`;
+
+-- Fix livreurs table structure
+
+-- 1. First, check if table exists and create if not
+CREATE TABLE IF NOT EXISTS livreurs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    vehicule_type VARCHAR(50) DEFAULT 'voiture',
+    plaque_immatriculation VARCHAR(50),
+    zone_intervention TEXT,
+    statut VARCHAR(20) DEFAULT 'actif',
+    note_moyenne DECIMAL(3,2) DEFAULT 0,
+    total_livraisons INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 2. Add missing columns if they don't exist (for existing tables)
+ALTER TABLE livreurs 
+ADD COLUMN IF NOT EXISTS vehicule_type VARCHAR(50) DEFAULT 'voiture';
+
+ALTER TABLE livreurs 
+ADD COLUMN IF NOT EXISTS plaque_immatriculation VARCHAR(50);
+
+ALTER TABLE livreurs 
+ADD COLUMN IF NOT EXISTS zone_intervention TEXT;
+
+ALTER TABLE livreurs 
+ADD COLUMN IF NOT EXISTS note_moyenne DECIMAL(3,2) DEFAULT 0;
+
+ALTER TABLE livreurs 
+ADD COLUMN IF NOT EXISTS total_livraisons INT DEFAULT 0;
+
+-- 3. Fix column names if they have wrong names
+-- If you have 'livreur_statut' instead of 'statut', rename it:
+ALTER TABLE livreurs CHANGE COLUMN IF EXISTS livreur_statut statut VARCHAR(20) DEFAULT 'actif';
+
+-- 4. Add foreign key if missing
+ALTER TABLE livreurs 
+ADD CONSTRAINT IF NOT EXISTS fk_livreur_user 
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
 -- =============================================
 -- INSERT USERS
 -- =============================================
