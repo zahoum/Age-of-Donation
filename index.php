@@ -76,14 +76,20 @@ try {
 $page_title = 'الرئيسية';
 ?>
 <!DOCTYPE html>
-<html lang="fr" dir="rtl">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title><?php echo htmlspecialchars($page_title); ?> - Age of Donnation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         :root {
             --primary: #2d3436;
             --secondary: #636e72;
@@ -96,20 +102,15 @@ $page_title = 'الرئيسية';
             --info: #00cec9;
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Tajawal', sans-serif;
-        }
-        
         body {
+            font-family: 'Tajawal', sans-serif;
             background-color: #f8f9fa;
             color: #333;
             line-height: 1.6;
+            overflow-x: hidden;
         }
         
-        /* Navbar - مثل تصميم dashboard */
+        /* Navbar */
         .navbar {
             background: white;
             box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -132,7 +133,8 @@ $page_title = 'الرئيسية';
             text-decoration: none;
             color: var(--primary);
             font-weight: 700;
-            font-size: 24px;
+            font-size: 20px;
+            flex-shrink: 0;
         }
         
         .logo-icon {
@@ -147,16 +149,23 @@ $page_title = 'الرئيسية';
             font-size: 20px;
         }
         
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 10px;
+        }
+        
         .nav-links {
             display: flex;
             gap: 5px;
             list-style: none;
             margin: 0;
             padding: 0;
-        }
-        
-        .nav-item {
-            position: relative;
+            transition: all 0.3s ease;
         }
         
         .nav-link {
@@ -169,6 +178,8 @@ $page_title = 'الرئيسية';
             align-items: center;
             gap: 8px;
             font-weight: 500;
+            font-size: 14px;
+            white-space: nowrap;
         }
         
         .nav-link:hover {
@@ -182,11 +193,18 @@ $page_title = 'الرئيسية';
             box-shadow: 0 4px 12px rgba(116, 185, 255, 0.3);
         }
         
+        /* User Menu */
         .user-menu {
             display: flex;
             align-items: center;
             gap: 15px;
             position: relative;
+            flex-shrink: 0;
+        }
+        
+        .user-menu .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         
         .user-avatar {
@@ -202,6 +220,7 @@ $page_title = 'الرئيسية';
             font-size: 18px;
             cursor: pointer;
             transition: all 0.3s;
+            flex-shrink: 0;
         }
         
         .user-avatar:hover {
@@ -251,25 +270,6 @@ $page_title = 'الرئيسية';
             background: #ffebee;
         }
         
-        .logout-btn {
-            background: none;
-            border: 1px solid #ddd;
-            padding: 8px 20px;
-            border-radius: 6px;
-            color: var(--secondary);
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .logout-btn:hover {
-            background: #ffeaa7;
-            border-color: #fdcb6e;
-            color: #d63031;
-        }
-        
         /* Main Content */
         .main-content {
             margin-top: 90px;
@@ -277,14 +277,13 @@ $page_title = 'الرئيسية';
             min-height: calc(100vh - 160px);
         }
         
-        /* Container */
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 15px;
         }
         
-        /* Welcome Section - مثل تصميم dashboard */
+        /* Welcome Section */
         .welcome-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -295,7 +294,7 @@ $page_title = 'الرئيسية';
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-
+        
         .welcome-section::before {
             content: '';
             position: absolute;
@@ -306,23 +305,12 @@ $page_title = 'الرئيسية';
             background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
             animation: rotate 20s linear infinite;
         }
-
-        .welcome-section::after {
-            content: '';
-            position: absolute;
-            bottom: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
-            animation: rotate 25s linear infinite reverse;
-        }
-
+        
         @keyframes rotate {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-
+        
         .welcome-content {
             position: relative;
             z-index: 1;
@@ -330,7 +318,7 @@ $page_title = 'الرئيسية';
             align-items: center;
             gap: 30px;
         }
-
+        
         .welcome-icon {
             width: 100px;
             height: 100px;
@@ -340,75 +328,126 @@ $page_title = 'الرئيسية';
             align-items: center;
             justify-content: center;
             font-size: 50px;
-            color: white;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.3);
             animation: pulse 2s infinite;
+            flex-shrink: 0;
         }
-
+        
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
-
+        
         .welcome-text {
             flex: 1;
         }
-
+        
         .welcome-text h1 {
             font-size: 48px;
             margin-bottom: 15px;
             font-weight: 700;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
-
+        
         .welcome-text p {
             font-size: 20px;
             opacity: 0.95;
             margin-bottom: 25px;
         }
-
-        .welcome-stats {
-            display: flex;
-            gap: 40px;
-            margin-top: 20px;
-        }
-
-        .welcome-stat {
-            text-align: center;
-        }
-
-        .welcome-stat .stat-number {
-            font-size: 32px;
-            font-weight: 700;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .welcome-stat .stat-label {
-            font-size: 16px;
-            opacity: 0.9;
-            display: block;
-        }
-
-        @media (max-width: 768px) {
-            .welcome-content {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .welcome-stats {
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 20px;
-            }
-            
-            .welcome-text h1 {
-                font-size: 32px;
-            }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
         
-        /* Cards - مثل تصميم dashboard */
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .stat-content h3 {
+            margin: 0;
+            font-size: 28px;
+            color: var(--primary);
+        }
+        
+        .stat-content p {
+            margin: 5px 0 0;
+            color: var(--secondary);
+            font-size: 14px;
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--dark);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .action-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+        
+        .action-card i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+        
+        .action-card h4 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+        
+        .action-card p {
+            margin: 0;
+            color: var(--secondary);
+            font-size: 13px;
+        }
+        
+        /* Cards */
         .card {
             background: white;
             border-radius: 12px;
@@ -445,7 +484,28 @@ $page_title = 'الرئيسية';
             padding: 25px;
         }
         
-        /* Buttons - مثل تصميم dashboard */
+        /* Grid System */
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: -15px;
+        }
+        
+        [class*="col-"] {
+            padding: 15px;
+        }
+        
+        .col-3 {
+            flex: 0 0 25%;
+            max-width: 25%;
+        }
+        
+        .col-4 {
+            flex: 0 0 33.333%;
+            max-width: 33.333%;
+        }
+        
+        /* Buttons */
         .btn {
             padding: 10px 25px;
             border-radius: 8px;
@@ -475,19 +535,6 @@ $page_title = 'الرئيسية';
             color: white;
         }
         
-        .btn-success:hover {
-            background: linear-gradient(135deg, #00a085, #00b7a8);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #d63031, #ff7675);
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background: linear-gradient(135deg, #c0392b, #e17055);
-        }
-        
         .btn-outline {
             background: transparent;
             border: 2px solid var(--accent);
@@ -498,132 +545,10 @@ $page_title = 'الرئيسية';
             background: var(--accent);
             color: white;
         }
-
+        
         .btn-sm {
             padding: 5px 15px;
             font-size: 13px;
-        }
-        
-        /* Stats Cards - مثل تصميم dashboard */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: transform 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-        }
-        
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-        }
-        
-        .stat-content h3 {
-            margin: 0;
-            font-size: 28px;
-            color: var(--primary);
-        }
-        
-        .stat-content p {
-            margin: 5px 0 0;
-            color: var(--secondary);
-            font-size: 14px;
-        }
-        
-        /* Quick Actions - مثل تصميم dashboard */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .action-card {
-            background: white;
-            border-radius: 12px;
-            padding: 30px 20px;
-            text-align: center;
-            text-decoration: none;
-            color: var(--dark);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-
-        .action-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-        }
-
-        .action-card i {
-            font-size: 40px;
-            margin-bottom: 15px;
-            color: var(--accent);
-        }
-
-        .action-card h4 {
-            margin: 0 0 5px 0;
-            font-size: 18px;
-        }
-
-        .action-card p {
-            margin: 0;
-            color: var(--secondary);
-            font-size: 13px;
-        }
-
-        /* Grid System */
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            margin: 0 -15px;
-        }
-        
-        .col-6 {
-            flex: 0 0 50%;
-            max-width: 50%;
-            padding: 0 15px;
-        }
-        
-        .col-4 {
-            flex: 0 0 33.333%;
-            max-width: 33.333%;
-            padding: 0 15px;
-        }
-        
-        .col-3 {
-            flex: 0 0 25%;
-            max-width: 25%;
-            padding: 0 15px;
-        }
-        
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-            margin-top: 30px;
         }
         
         /* Badges */
@@ -645,82 +570,122 @@ $page_title = 'الرئيسية';
             color: #155724;
         }
         
-        .badge-info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-        
-        .badge-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        /* Table Styles */
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            padding: 12px 15px;
-            text-align: right;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table th {
+        /* Donation Card */
+        .donation-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            height: 100%;
             background: #f8f9fa;
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .table tbody tr:hover {
-            background: #f8f9fa;
+            transition: all 0.3s;
         }
         
-        /* Mobile Menu Toggle */
-        .menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: var(--primary);
-            cursor: pointer;
+        .donation-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
+        /* How It Works */
+        .how-it-works-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .step-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .step-number {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 30px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* ============================================
+           RESPONSIVE STYLES
+           ============================================ */
+        
+        /* Tablets */
         @media (max-width: 992px) {
             .quick-actions {
                 grid-template-columns: repeat(2, 1fr);
             }
+            
+            .how-it-works-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .welcome-text h1 {
+                font-size: 36px;
+            }
+            
+            .col-3, .col-4 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
         }
-
+        
+        /* Mobile */
         @media (max-width: 768px) {
             .navbar {
                 padding: 0 15px;
+                height: auto;
+                min-height: 70px;
+                flex-wrap: wrap;
             }
             
-            .nav-links {
-                display: none;
+            /* Organisation des éléments sur 3 colonnes */
+            .logo {
+                order: 0;
+                flex: 0 0 auto;
             }
             
             .menu-toggle {
                 display: block;
+                order: 1;
+                flex: 0 0 auto;
+            }
+            
+            .user-menu {
+                order: 2;
+                flex: 0 0 auto;
+                gap: 8px;
+            }
+            
+            /* Les boutons restent bien en place */
+            .user-menu .btn {
+                padding: 6px 12px;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+            
+            /* Menu mobile en dessous */
+            .nav-links {
+                display: none;
+                order: 3;
+                width: 100%;
+                flex-direction: column;
+                padding: 20px 0;
+                gap: 10px;
             }
             
             .nav-links.active {
                 display: flex;
-                flex-direction: column;
-                position: absolute;
-                top: 70px;
-                left: 0;
-                right: 0;
-                background: white;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-                padding: 20px;
+            }
+            
+            .nav-link {
+                justify-content: center;
+                white-space: normal;
             }
             
             .main-content {
@@ -728,22 +693,157 @@ $page_title = 'الرئيسية';
                 padding: 15px;
             }
             
+            .welcome-section {
+                padding: 30px 20px;
+            }
+            
+            .welcome-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .welcome-text h1 {
+                font-size: 28px;
+            }
+            
+            .welcome-text p {
+                font-size: 16px;
+            }
+            
             .stats-grid {
                 grid-template-columns: 1fr;
             }
             
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
-            
-            .col-6, .col-4, .col-3 {
-                flex: 0 0 100%;
-                max-width: 100%;
-                margin-bottom: 15px;
-            }
-            
             .quick-actions {
                 grid-template-columns: 1fr;
+            }
+            
+            .how-it-works-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-header {
+                padding: 15px;
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+            
+            .col-3, .col-4 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
+        
+        /* Very Small Mobile */
+        @media (max-width: 480px) {
+            .logo span {
+                font-size: 16px;
+            }
+            
+            .logo-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+            
+            .user-menu {
+                gap: 5px;
+            }
+            
+            .user-menu .btn {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+            
+            .user-avatar {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+            
+            .welcome-icon {
+                width: 70px;
+                height: 70px;
+                font-size: 35px;
+            }
+            
+            .welcome-text h1 {
+                font-size: 24px;
+            }
+            
+            .stat-card {
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            .stat-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            .stat-content h3 {
+                font-size: 22px;
+            }
+            
+            .action-card {
+                padding: 20px 15px;
+            }
+            
+            .action-card i {
+                font-size: 32px;
+            }
+            
+            .action-card h4 {
+                font-size: 16px;
+            }
+            
+            .card-header h3 {
+                font-size: 18px;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            .donation-card {
+                padding: 15px;
+            }
+            
+            .donation-card h4 {
+                font-size: 16px;
+            }
+            
+            .step-number {
+                width: 55px;
+                height: 55px;
+                font-size: 24px;
+            }
+            
+            .step-card h4 {
+                font-size: 16px;
+            }
+            
+            .btn {
+                padding: 8px 20px;
+                font-size: 13px;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .btn, .action-card, .stat-card, .nav-link {
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            .btn:active, .action-card:active, .stat-card:active {
+                transform: scale(0.98);
             }
         }
     </style>
@@ -758,35 +858,35 @@ $page_title = 'الرئيسية';
             <span>Age of Donnation</span>
         </a>
         
-        <button class="menu-toggle" onclick="toggleMenu()">
+        <button class="menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
             <i class="fas fa-bars"></i>
         </button>
         
         <ul class="nav-links" id="navLinks">
             <?php if(isset($_SESSION['user_id'])): ?>
                 <?php if($_SESSION['user_type'] == 'beneficiaire'): ?>
-                    <li class="nav-item"><a href="beneficiaire/dashboard.php" class="nav-link"><i class="fas fa-home"></i> لوحة التحكم</a></li>
-                    <li class="nav-item"><a href="beneficiaire/catalogue.php" class="nav-link"><i class="fas fa-box-open"></i> الكتالوج</a></li>
-                    <li class="nav-item"><a href="beneficiaire/mes-demandes.php" class="nav-link"><i class="fas fa-file-alt"></i> طلباتي</a></li>
-                    <li class="nav-item"><a href="beneficiaire/messagerie.php" class="nav-link"><i class="fas fa-comments"></i> المراسلة</a></li>
+                    <li class="nav-item"><a href="beneficiaire/dashboard.php" class="nav-link"><i class="fas fa-home"></i> <span>لوحة التحكم</span></a></li>
+                    <li class="nav-item"><a href="beneficiaire/catalogue.php" class="nav-link"><i class="fas fa-box-open"></i> <span>الكتالوج</span></a></li>
+                    <li class="nav-item"><a href="beneficiaire/mes-demandes.php" class="nav-link"><i class="fas fa-file-alt"></i> <span>طلباتي</span></a></li>
+                    <li class="nav-item"><a href="beneficiaire/messagerie.php" class="nav-link"><i class="fas fa-comments"></i> <span>المراسلة</span></a></li>
                     
                 <?php elseif($_SESSION['user_type'] == 'donateur'): ?>
-                    <li class="nav-item"><a href="donateur/dashboard.php" class="nav-link"><i class="fas fa-home"></i> لوحة التحكم</a></li>
-                    <li class="nav-item"><a href="donateur/publier-don.php" class="nav-link"><i class="fas fa-gift"></i> نشر تبرع</a></li>
-                    <li class="nav-item"><a href="donateur/mes-dons.php" class="nav-link"><i class="fas fa-boxes"></i> تبرعاتي</a></li>
-                    <li class="nav-item"><a href="donateur/messagerie.php" class="nav-link"><i class="fas fa-comments"></i> المراسلة</a></li>
+                    <li class="nav-item"><a href="donateur/dashboard.php" class="nav-link"><i class="fas fa-home"></i> <span>لوحة التحكم</span></a></li>
+                    <li class="nav-item"><a href="donateur/publier-don.php" class="nav-link"><i class="fas fa-gift"></i> <span>نشر تبرع</span></a></li>
+                    <li class="nav-item"><a href="donateur/mes-dons.php" class="nav-link"><i class="fas fa-boxes"></i> <span>تبرعاتي</span></a></li>
+                    <li class="nav-item"><a href="donateur/messagerie.php" class="nav-link"><i class="fas fa-comments"></i> <span>المراسلة</span></a></li>
                     
                 <?php elseif($_SESSION['user_type'] == 'admin'): ?>
-                    <li class="nav-item"><a href="admin/dashboard.php" class="nav-link"><i class="fas fa-home"></i> لوحة التحكم</a></li>
-                    <li class="nav-item"><a href="admin/utilisateurs.php" class="nav-link"><i class="fas fa-users"></i> المستخدمون</a></li>
-                    <li class="nav-item"><a href="admin/dons.php" class="nav-link"><i class="fas fa-gift"></i> التبرعات</a></li>
-                    <li class="nav-item"><a href="admin/statistiques.php" class="nav-link"><i class="fas fa-chart-bar"></i> الإحصائيات</a></li>
+                    <li class="nav-item"><a href="admin/dashboard.php" class="nav-link"><i class="fas fa-home"></i> <span>لوحة التحكم</span></a></li>
+                    <li class="nav-item"><a href="admin/utilisateurs.php" class="nav-link"><i class="fas fa-users"></i> <span>المستخدمون</span></a></li>
+                    <li class="nav-item"><a href="admin/dons.php" class="nav-link"><i class="fas fa-gift"></i> <span>التبرعات</span></a></li>
+                    <li class="nav-item"><a href="admin/statistiques.php" class="nav-link"><i class="fas fa-chart-bar"></i> <span>الإحصائيات</span></a></li>
                     
                 <?php endif; ?>
             <?php else: ?>
-                <li class="nav-item"><a href="index.php" class="nav-link active"><i class="fas fa-home"></i> الرئيسية</a></li>
-                <li class="nav-item"><a href="auth/login.php" class="nav-link"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a></li>
-                <li class="nav-item"><a href="auth/signup.php" class="nav-link"><i class="fas fa-user-plus"></i> إنشاء حساب</a></li>
+                <li class="nav-item"><a href="index.php" class="nav-link active"><i class="fas fa-home"></i> <span>الرئيسية</span></a></li>
+                <li class="nav-item"><a href="auth/login.php" class="nav-link"><i class="fas fa-sign-in-alt"></i> <span>تسجيل الدخول</span></a></li>
+                <li class="nav-item"><a href="auth/signup.php" class="nav-link"><i class="fas fa-user-plus"></i> <span>إنشاء حساب</span></a></li>
             <?php endif; ?>
         </ul>
         
@@ -828,7 +928,7 @@ $page_title = 'الرئيسية';
     <!-- Main Content -->
     <div class="main-content">
         <div class="container">
-            <!-- Beautiful Blue Welcome Section - مثل dashboard -->
+            <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-content">
                     <div class="welcome-icon">
@@ -841,7 +941,7 @@ $page_title = 'الرئيسية';
                 </div>
             </div>
 
-            <!-- Stats Cards - مثل dashboard -->
+            <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #00b894, #00cec9);">
@@ -881,7 +981,7 @@ $page_title = 'الرئيسية';
                 </div>
             </div>
 
-            <!-- Quick Actions - مثل dashboard -->
+            <!-- Quick Actions -->
             <div class="quick-actions">
                 <a href="auth/signup.php?type=donateur" class="action-card">
                     <i class="fas fa-gift"></i>
@@ -916,7 +1016,7 @@ $page_title = 'الرئيسية';
                     <div class="row">
                         <?php foreach($recent_dons as $don): ?>
                         <div class="col-4">
-                            <div style="border: 1px solid #eee; border-radius: 10px; padding: 20px; height: 100%; background: #f8f9fa;">
+                            <div class="donation-card">
                                 <h4 style="margin-bottom: 10px; color: var(--primary);"><?php echo htmlspecialchars($don['titre']); ?></h4>
                                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
                                     <?php echo strlen($don['description']) > 80 ? substr(htmlspecialchars($don['description']), 0, 80) . '...' : htmlspecialchars($don['description']); ?>
@@ -925,11 +1025,11 @@ $page_title = 'الرئيسية';
                                     <span class="badge badge-primary"><?php echo $don['categorie']; ?></span>
                                     <span class="badge badge-success"><?php echo $don['ville']; ?></span>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                     <small style="color: #888;">
                                         <i class="fas fa-user"></i> <?php echo htmlspecialchars($don['donateur_nom']); ?>
                                     </small>
-                                    <a href="auth/login.php" class="btn btn-sm btn-outline" style="padding: 5px 15px; font-size: 13px;">
+                                    <a href="auth/login.php" class="btn btn-sm btn-outline">
                                         <i class="fas fa-eye"></i> عرض
                                     </a>
                                 </div>
@@ -947,42 +1047,34 @@ $page_title = 'الرئيسية';
                     <h3><i class="fas fa-question-circle" style="color: var(--accent);"></i> كيف تعمل المنصة؟</h3>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-3">
-                            <div style="text-align: center; padding: 20px;">
-                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #0984e3, #74b9ff); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
-                                    1
-                                </div>
-                                <h4>انشر تبرعك</h4>
-                                <p style="color: var(--secondary);">سجل كمتبرع وانشر الأشياء التي لم تعد بحاجة إليها</p>
+                    <div class="how-it-works-grid">
+                        <div class="step-card">
+                            <div class="step-number" style="background: linear-gradient(135deg, #0984e3, #74b9ff);">
+                                1
                             </div>
+                            <h4>انشر تبرعك</h4>
+                            <p style="color: var(--secondary);">سجل كمتبرع وانشر الأشياء التي لم تعد بحاجة إليها</p>
                         </div>
-                        <div class="col-3">
-                            <div style="text-align: center; padding: 20px;">
-                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #00b894, #00cec9); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
-                                    2
-                                </div>
-                                <h4>اطلب تبرعًا</h4>
-                                <p style="color: var(--secondary);">ابحث في الكتالوج واطلب ما تحتاجه</p>
+                        <div class="step-card">
+                            <div class="step-number" style="background: linear-gradient(135deg, #00b894, #00cec9);">
+                                2
                             </div>
+                            <h4>اطلب تبرعًا</h4>
+                            <p style="color: var(--secondary);">ابحث في الكتالوج واطلب ما تحتاجه</p>
                         </div>
-                        <div class="col-3">
-                            <div style="text-align: center; padding: 20px;">
-                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #fdcb6e, #e17055); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
-                                    3
-                                </div>
-                                <h4>التواصل</h4>
-                                <p style="color: var(--secondary);">تواصل مع الطرف الآخر ورتب الاستلام</p>
+                        <div class="step-card">
+                            <div class="step-number" style="background: linear-gradient(135deg, #fdcb6e, #e17055);">
+                                3
                             </div>
+                            <h4>التواصل</h4>
+                            <p style="color: var(--secondary);">تواصل مع الطرف الآخر ورتب الاستلام</p>
                         </div>
-                        <div class="col-3">
-                            <div style="text-align: center; padding: 20px;">
-                                <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #a29bfe, #6c5ce7); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 30px; color: white;">
-                                    4
-                                </div>
-                                <h4>التسليم</h4>
-                                <p style="color: var(--secondary);">استلم التبرع وأنعم به لمن يحتاجه</p>
+                        <div class="step-card">
+                            <div class="step-number" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7);">
+                                4
                             </div>
+                            <h4>التسليم</h4>
+                            <p style="color: var(--secondary);">استلم التبرع وأنعم به لمن يحتاجه</p>
                         </div>
                     </div>
                 </div>
@@ -1001,20 +1093,30 @@ $page_title = 'الرئيسية';
         dropdown.classList.toggle('active');
     }
     
-    // إغلاق القوائم عند النقر خارجها
+    // Close menus when clicking outside
     document.addEventListener('click', function(event) {
         const navLinks = document.getElementById('navLinks');
         const menuToggle = document.querySelector('.menu-toggle');
         const userDropdown = document.getElementById('userDropdown');
         const userAvatar = document.querySelector('.user-avatar');
         
-        if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
+        if (navLinks && menuToggle && !navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
             navLinks.classList.remove('active');
         }
         
-        if (!userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
+        if (userDropdown && userAvatar && !userDropdown.contains(event.target) && !userAvatar.contains(event.target)) {
             userDropdown.classList.remove('active');
         }
+    });
+    
+    // Close mobile menu when clicking a link
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            const navLinks = document.getElementById('navLinks');
+            if (window.innerWidth <= 768) {
+                navLinks.classList.remove('active');
+            }
+        });
     });
     </script>
 </body>
