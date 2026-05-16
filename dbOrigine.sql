@@ -299,6 +299,7 @@ ALTER TABLE livreurs
 ADD CONSTRAINT IF NOT EXISTS fk_livreur_user 
 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
+UPDATE users SET password = 'admin123' WHERE email = 'admin@ageofdonnation.org'
 -- =============================================
 -- INSERT USERS
 -- =============================================
