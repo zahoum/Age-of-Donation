@@ -300,6 +300,69 @@ ADD CONSTRAINT IF NOT EXISTS fk_livreur_user
 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 UPDATE users SET password = 'admin123' WHERE email = 'admin@ageofdonnation.org'
+
+-- Add ip_address column to store sender's IP
+ALTER TABLE `contact_messages` 
+ADD COLUMN IF NOT EXISTS `ip_address` VARCHAR(45) DEFAULT NULL 
+COMMENT 'IP address of the sender';
+
+-- Add reply_message column to store admin replies
+ALTER TABLE `contact_messages` 
+ADD COLUMN IF NOT EXISTS `reply_message` TEXT DEFAULT NULL 
+COMMENT 'Admin reply message';
+
+-- Add replied_at column to track when reply was sent
+ALTER TABLE `contact_messages` 
+ADD COLUMN IF NOT EXISTS `replied_at` TIMESTAMP NULL DEFAULT NULL 
+COMMENT 'Date and time when reply was sent';
+
+-- Add updated_at column for tracking changes
+ALTER TABLE `contact_messages` 
+ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP 
+COMMENT 'Last update timestamp';
+
+-- =============================================
+-- Create notifications table for admin notifications
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS `notifications` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `user_id` INT(11) NOT NULL,
+    `type` VARCHAR(50) NOT NULL DEFAULT 'admin',
+    `titre` VARCHAR(255) NOT NULL,
+    `message` TEXT NOT NULL,
+    `lien` VARCHAR(255) DEFAULT NULL,
+    `lu` TINYINT(1) DEFAULT 0,
+    `lu_at` TIMESTAMP NULL DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `user_id` (`user_id`),
+    CONSTRAINT `notifications_ibfk_1` 
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) 
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- Verify the updates
+-- =============================================
+
+-- Show all columns in contact_messages table
+SHOW COLUMNS FROM `contact_messages`;
+
+-- Show notifications table structure
+SHOW COLUMNS FROM `notifications`;
+
+-- =============================================
+-- Insert a test notification (optional)
+-- =============================================
+
+-- INSERT INTO `notifications` (user_id, type, titre, message) 
+-- VALUES (1, 'admin', 'Test Notification', 'This is a test notification from admin');
+
+-- =============================================
+-- Success message
+-- =============================================
+SELECT '✅ Database updated successfully!' AS status;
 -- =============================================
 -- INSERT USERS
 -- =============================================

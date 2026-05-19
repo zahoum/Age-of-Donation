@@ -1,9 +1,7 @@
 <?php
-
 session_start();
 
 $page_title = 'اتصل بنا';
-// require_once 'header.php';
 
 // =========================
 // CSRF TOKEN
@@ -73,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
                         
                         $ip_address = getUserIP();
                         
-                        $sql = "INSERT INTO contact_messages (name, email, phone, subject, message, ip_address, created_at)
-                                VALUES (:name, :email, :phone, :subject, :message, :ip_address, NOW())";
+                        $sql = "INSERT INTO contact_messages (name, email, phone, subject, message, status, ip_address, created_at)
+                                VALUES (:name, :email, :phone, :subject, :message, 'new', :ip_address, NOW())";
                         
                         $stmt = $db->prepare($sql);
                         $stmt->execute([
@@ -86,37 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
                             ':ip_address' => $ip_address
                         ]);
                         
-                        // Send email using FormSubmit (server-side)
-                        $formsubmitData = [
-                            'name' => $name,
-                            'email' => $email,
-                            'phone' => $phone,
-                            'subject' => $subject,
-                            'message' => $message,
-                            '_subject' => 'رسالة جديدة من Age of Donation - ' . $subject,
-                            '_replyto' => $email,
-                            '_captcha' => 'false',
-                            '_template' => 'table'
-                        ];
+                        $success = 'تم إرسال رسالتك بنجاح! سنقوم بالرد عليك قريباً.';
+                        // Clear form data
+                        $_POST = array();
                         
-                        $ch = curl_init('https://formsubmit.co/ajax/aissazahoum6@gmail.com');
-                        curl_setopt($ch, CURLOPT_POST, true);
-                        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($formsubmitData));
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                        
-                        $response = curl_exec($ch);
-                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                        curl_close($ch);
-                        
-                        if ($httpCode === 200) {
-                            $success = 'تم إرسال رسالتك بنجاح! سنقوم بالرد عليك قريباً.';
-                            // Clear form data
-                            $_POST = array();
-                        } else {
-                            $error = 'حدث خطأ في إرسال البريد الإلكتروني. يرجى المحاولة مرة أخرى.';
-                        }
+                        // Generate new CSRF token
+                        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                         
                     } catch (PDOException $e) {
                         error_log($e->getMessage());
@@ -339,6 +312,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
     </style>
 </head>
 <body>
+    <?php require_once 'header.php'; ?>
+    
     <div class="contact-wrapper">
         <div class="main-card">
             <div class="card-header-custom">
@@ -550,15 +525,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
                 return false;
             }
             
-            // Disable button on submit
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-            
-            // Re-enable after 30 seconds
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الرسالة';
-            }, 30000);
         });
         
         // Real-time character counter for message
@@ -584,7 +552,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_form'])) {
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?php require_once 'footer.php'; ?>
 </body>
 </html>
-
-<?php require_once 'footer.php'; ?>
