@@ -88,7 +88,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     }
 }
 
-// ========== جلب جميع التبرعات المتاحة ==========
+// ========== معالجة الفلاتر ==========
+$selected_category = isset($_GET['category']) ? $_GET['category'] : '';
+$selected_city = isset($_GET['city']) ? $_GET['city'] : '';
+$search_keyword = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+// بناء استعلام الفلاتر
+$where_conditions = ["d.statut = 'disponible'", "(d.is_deleted IS NULL OR d.is_deleted = 0)"];
+$params = [];
+
+if (!empty($selected_category)) {
+    $where_conditions[] = "d.categorie = :category";
+    $params[':category'] = $selected_category;
+}
+
+if (!empty($selected_city)) {
+    $where_conditions[] = "d.ville = :city";
+    $params[':city'] = $selected_city;
+}
+
+if (!empty($search_keyword)) {
+    $where_conditions[] = "(d.titre LIKE :search OR d.description LIKE :search OR u.nom LIKE :search)";
+    $params[':search'] = "%$search_keyword%";
+}
+
+$where_clause = "WHERE " . implode(" AND ", $where_conditions);
+
+// ========== جلب جميع التبرعات المتاحة مع الفلاتر ==========
 $query_dons = "
     SELECT d.*, 
            u.nom as donateur_nom,
@@ -96,11 +122,26 @@ $query_dons = "
            (SELECT COUNT(*) FROM demandes WHERE don_id = d.id) as nb_demandes
     FROM dons d
     INNER JOIN users u ON d.donateur_id = u.id
-    WHERE d.statut = 'disponible' 
-    AND (d.is_deleted IS NULL OR d.is_deleted = 0)
+    $where_clause
     ORDER BY d.created_at DESC
 ";
-$dons = $db->query($query_dons)->fetchAll(PDO::FETCH_ASSOC);
+$stmt_dons = $db->prepare($query_dons);
+foreach ($params as $key => $value) {
+    $stmt_dons->bindValue($key, $value);
+}
+$stmt_dons->execute();
+$dons = $stmt_dons->fetchAll(PDO::FETCH_ASSOC);
+
+// ========== جلب المدن المتاحة للفلتر ==========
+$query_cities = "
+    SELECT DISTINCT ville 
+    FROM dons 
+    WHERE statut = 'disponible' 
+    AND ville IS NOT NULL 
+    AND ville != ''
+    ORDER BY ville
+";
+$cities = $db->query($query_cities)->fetchAll(PDO::FETCH_COLUMN);
 
 // تجهيز الفئات والحالات للعرض
 $categories = [
@@ -340,17 +381,6 @@ $page_title = 'كتالوج التبرعات';
             animation: rotate 20s linear infinite;
         }
 
-        .welcome-section::after {
-            content: '';
-            position: absolute;
-            bottom: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
-            animation: rotate 25s linear infinite reverse;
-        }
-
         @keyframes rotate {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -396,49 +426,124 @@ $page_title = 'كتالوج التبرعات';
             margin: 0;
         }
         
-        /* Cards */
-        .card {
+        /* Filter Section */
+        .filter-section {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            margin-bottom: 25px;
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
         }
         
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-        }
-        
-        .card-header {
-            padding: 20px 25px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .card-header h3 {
-            margin: 0;
+        .filter-title {
+            font-size: 18px;
+            font-weight: 600;
             color: var(--primary);
-            font-size: 20px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f1f2f6;
         }
         
-        .card-body {
-            padding: 25px;
+        .filter-title i {
+            color: var(--accent);
         }
         
-        /* Donation Grid */
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 180px;
+        }
+        
+        .filter-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.1);
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-filter {
+            background: linear-gradient(135deg, var(--accent), #74b9ff);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-filter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 132, 227, 0.3);
+        }
+        
+        .btn-reset {
+            background: #f1f2f6;
+            color: #666;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-reset:hover {
+            background: #e1e1e1;
+        }
+        
+        .results-count {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e1e1;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .results-count strong {
+            color: var(--accent);
+            font-size: 18px;
+        }
+        
+        /* Cards */
         .donations-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 25px;
-            margin-top: 20px;
         }
         
         .donation-card {
@@ -600,6 +705,49 @@ $page_title = 'كتالوج التبرعات';
             transform: scale(1.05);
         }
         
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 15px;
+        }
+        
+        .empty-state i {
+            font-size: 80px;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state p {
+            color: #999;
+        }
+        
+        /* Alert */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-right: 4px solid;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border-right-color: #155724;
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border-right-color: #721c24;
+            color: #721c24;
+        }
+        
         /* Modal */
         .modal {
             display: none;
@@ -670,7 +818,6 @@ $page_title = 'كتالوج التبرعات';
             padding: 25px;
         }
         
-        /* Form */
         .form-group {
             margin-bottom: 20px;
         }
@@ -703,45 +850,35 @@ $page_title = 'كتالوج التبرعات';
             min-height: 120px;
         }
         
-        /* Alert */
-        .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-right: 4px solid;
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #74b9ff);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
         }
         
-        .alert-success {
-            background: #d4edda;
-            border-right-color: #155724;
-            color: #155724;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 132, 227, 0.3);
         }
         
-        .alert-danger {
-            background: #f8d7da;
-            border-right-color: #721c24;
-            color: #721c24;
-        }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-        
-        .empty-state i {
-            font-size: 80px;
-            color: #ccc;
-            margin-bottom: 20px;
-        }
-        
-        .empty-state h3 {
+        .btn-outline {
+            background: #f1f2f6;
             color: #666;
-            margin-bottom: 10px;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
         }
         
-        .empty-state p {
-            color: #999;
+        .btn-outline:hover {
+            background: #e1e1e1;
         }
         
         /* Mobile Menu Toggle */
@@ -782,6 +919,22 @@ $page_title = 'كتالوج التبرعات';
             
             .donations-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .filter-form {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .filter-buttons {
+                width: 100%;
+            }
+            
+            .btn-filter, .btn-reset {
+                flex: 1;
             }
         }
     </style>
@@ -858,12 +1011,67 @@ $page_title = 'كتالوج التبرعات';
                 </div>
             <?php endif; ?>
 
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="filter-title">
+                    <i class="fas fa-filter"></i>
+                    <span>البحث والتصفية</span>
+                </div>
+                
+                <form method="GET" action="" class="filter-form">
+                    <div class="filter-group">
+                        <label><i class="fas fa-search"></i> بحث عام</label>
+                        <input type="text" name="search" placeholder="ابحث بالعنوان أو الوصف..." value="<?php echo htmlspecialchars($search_keyword); ?>">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label><i class="fas fa-tag"></i> الفئة</label>
+                        <select name="category">
+                            <option value="">جميع الفئات</option>
+                            <?php foreach($categories as $key => $label): ?>
+                                <option value="<?php echo $key; ?>" <?php echo $selected_category == $key ? 'selected' : ''; ?>>
+                                    <?php echo $label; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label><i class="fas fa-map-marker-alt"></i> المدينة</label>
+                        <select name="city">
+                            <option value="">جميع المدن</option>
+                            <?php foreach($cities as $city): ?>
+                                <option value="<?php echo htmlspecialchars($city); ?>" <?php echo $selected_city == $city ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($city); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-buttons">
+                        <button type="submit" class="btn-filter">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <a href="catalogue.php" class="btn-reset">
+                            <i class="fas fa-undo-alt"></i> إعادة تعيين
+                        </a>
+                    </div>
+                </form>
+                
+                <div class="results-count">
+                    <i class="fas fa-gift"></i> عدد التبرعات المتاحة: <strong><?php echo count($dons); ?></strong>
+                </div>
+            </div>
+
             <!-- Donations Grid -->
             <?php if(empty($dons)): ?>
                 <div class="empty-state">
                     <i class="fas fa-gift"></i>
                     <h3>لا توجد تبرعات متاحة حالياً</h3>
-                    <p>ترقب قريباً، قد يتم نشر تبرعات جديدة</p>
+                    <p>حاول تغيير خيارات البحث أو العودة لاحقاً</p>
+                    <a href="catalogue.php" class="btn-filter" style="display: inline-block; margin-top: 15px; text-decoration: none;">
+                        <i class="fas fa-undo-alt"></i> عرض جميع التبرعات
+                    </a>
                 </div>
             <?php else: ?>
                 <div class="donations-grid">
@@ -892,6 +1100,14 @@ $page_title = 'كتالوج التبرعات';
                                 <?php else: ?>
                                     <div class="image-placeholder">
                                         <?php 
+                                        $defaultImages = [
+                                            'vetements' => '👕',
+                                            'nourriture' => '🍎',
+                                            'meubles' => '🛋️',
+                                            'livres' => '📚',
+                                            'electromenager' => '🔌',
+                                            'divers' => '📦'
+                                        ];
                                         echo $defaultImages[$don['categorie']] ?? '📦';
                                         ?>
                                     </div>
@@ -973,10 +1189,10 @@ $page_title = 'كتالوج التبرعات';
                     </div>
                     
                     <div style="display: flex; gap: 15px; justify-content: flex-start; margin-top: 20px;">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn-primary">
                             <i class="fas fa-paper-plane"></i> إرسال الطلب
                         </button>
-                        <button type="button" class="btn btn-outline" onclick="closeRequestModal()">
+                        <button type="button" class="btn-outline" onclick="closeRequestModal()">
                             <i class="fas fa-times"></i> إلغاء
                         </button>
                     </div>
@@ -1036,8 +1252,13 @@ $page_title = 'كتالوج التبرعات';
             closeRequestModal();
         }
     });
+    
+    // Auto-submit filter when selecting from dropdown (optional)
+    document.querySelectorAll('.filter-group select').forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
     </script>
 </body>
 </html>
-<?php
-include '../includes/footer.php'; ?>
